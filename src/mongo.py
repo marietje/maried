@@ -313,7 +313,8 @@ class MongoHistory(History):
         def record(self, media, request, at):
                 self.l.info(repr(media if request is None else request))
                 info = {'mediaKey': media.key,
-                        'byKey': None if request is None else request.by.key,
+                        'byKey': None if (request is None or request.by is None)
+                                        else request.by.key,
                         'at':  time.mktime(at.timetuple())}
                 info['key'] = self.cHistory.insert(
                                 MongoPastRequest.normalize_dict(info))
