@@ -74,7 +74,12 @@ class MediaFile(object):
         def key(self):
                 return self._key
 class BaseRequest(DictLike):
-        pass
+        @property
+        def by(self):
+                try:
+                        return DictLike.__getattr__(self, 'by')
+                except AttributeError:
+                        return None
 class PastRequest(BaseRequest):
         def __init__(self, history, data):
                 super(PastRequest, self).__init__(data)
