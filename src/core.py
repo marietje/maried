@@ -418,9 +418,10 @@ class Orchestrator(Module):
                         self.previously_playing = (media,
                                                  self.satisfied_request,
                                                  endTime)
+                        satisfied_request = self.satisfied_request
                 if not media is None:
                         self.history.record(media,
-                                self.satisfied_request,
+                                satisfied_request,
                                 endTime  - datetime.timedelta(0, media.length))
 
         def _player_on_playing_started(self, media, endTime):
