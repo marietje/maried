@@ -45,8 +45,12 @@ class Media(DictLike):
         def mediaFile(self):
                 return self.coll.mediaStore.by_key(self.mediaFileKey)
         def __eq__(self, other):
+                if not isinstance(other, Media):
+                        return False
                 return self.key == other.key
         def __ne__(self, other):
+                if not isinstance(other, Media):
+                        return True
                 return self.key != other.key
 
 
@@ -61,8 +65,12 @@ class MediaFile(object):
         def remove(self):
                 self.store.remove(self)
         def __eq__(self, other):
+                if not isinstance(other, MediaFile):
+                        return False
                 return self._key == other.key
         def __ne__(self, other):
+                if not isinstance(other, MediaFile):
+                        return True
                 return self._key != other.key
         def get_info(self):
                 stream = self.open()
@@ -107,8 +115,12 @@ class User(DictLike):
         def has_access(self):
                 raise NotImplementedError
         def __eq__(self, other):
+                if not isinstance(other, User):
+                        return False
                 return self.key == other.key
         def __ne__(self, other):
+                if not isinstance(other, User):
+                        return True
                 return self.key != other.key
 
 class Desk(Module):
