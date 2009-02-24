@@ -111,11 +111,11 @@ class ClassicDb(Module):
 
 	def queue_shift(self, cursor):
 		cursor.execute("""
-			SELECT MIN(notplayed.requestid) 
-			FROM (
-				SELECT requestid 
-				FROM queue 
-				WHERE played=0);""")
+			SELECT requestId
+			FROM queue
+			WHERE played=0
+			ORDER BY requestId
+			LIMIT 0, 1;""")
 		rid, = cursor.fetchone()
 
 		cursor.execute("""
