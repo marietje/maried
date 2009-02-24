@@ -21,7 +21,7 @@ class MediaFile(object):
 	def remove(self):
 		self.store.remove(self)
 	def get_hash(self):
-		raise NotImplemented
+		raise NotImplementedError
 class MediaFileInfo(object):
 	pass
 class Request(object):
@@ -62,13 +62,13 @@ class Desk(Module):
 
 class Users(Module):
 	def assert_request(self, user, media):
-		raise NotImplemented
+		raise NotImplementedError
 	def assert_addition(self, user, mediaFile):
-		raise NotImplemented
+		raise NotImplementedError
 	def assert_cancel(self, user, request):
-		raise NotImplemented
+		raise NotImplementedError
 	def assert_move(self, user, request, amount):
-		raise NotImplemented
+		raise NotImplementedError
 
 class Queue(Module):
 	def __init__(self, settings, logger):
@@ -126,21 +126,21 @@ class Orchestrator(Module):
 
 class Random(Module):
 	def pick(self):
-		raise NotImplemented
+		raise NotImplementedError
 
 class MediaInfo(Module):
 	def get_info(self, stream):
-		raise NotImplemented
+		raise NotImplementedError
 
 class MediaStore(Module):
 	def create(self, stream):
-		raise NotImplemented
+		raise NotImplementedError
 
 class Collection(Module):
 	def add(self, mediaFile, user):
-		raise NotImplemented
+		raise NotImplementedError
 	def list_media(self):
-		raise NotImplemented
+		raise NotImplementedError
 	def by_key(self, key):
-		raise NotImplemented
+		raise NotImplementedError
 

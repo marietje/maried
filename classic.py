@@ -27,9 +27,9 @@ class ClassicQueue(Queue):
 	def shift(self):
 		head = self.classicDb.queue_shift()
 	def cancel(self, request):
-		raise NotImplemented
+		raise NotImplementedError
 	def move(self, request, amount):
-		raise NotImplemented
+		raise NotImplementedError
 	
 class ClassicRequest(Request):
 	def __init__(self, key, *args, **kwargs):
@@ -134,12 +134,12 @@ class ClassicDb(Module):
 				self.user(cursor, rbid))
 
 	def media(self, cursor, key):
-		raise NotImplemented
+		raise NotImplementedError
 
 	def user(self, cursor, key):
-		raise NotImplemented
+		raise NotImplementedError
 	
 	def queue_request(self, cursor, media, user):
-		raise NotImplemented
+		raise NotImplementedError
 
 	
