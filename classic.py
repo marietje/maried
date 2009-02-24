@@ -2,6 +2,7 @@ from __future__ import with_statement
 
 from maried.core import *
 
+import random
 import MySQLdb
 import threading
 
@@ -67,7 +68,14 @@ class ClassicCollection(Collection):
 	pass
 
 class ClassicRandom(Random):
-	pass
+	def __init__(self, settings, logger):
+		super(self.__class__, self).__init__(settings, logger)
+		self.keys = map(lambda x: x.get_key(),
+				self.collection.list_media())
+		
+	def pick(self):
+		key = self.keys[random.randint(0, len(self.keys) - 1)]
+		return self.collection.by_key(key)
 
 class ClassicOrchestrator(Orchestrator):
 	def run(self):
