@@ -107,7 +107,7 @@ class ClassicDb(Module):
 	
 	def with_cursor(self, meth, *args, **kwargs):
 		with self.cursor() as cursor:
-			meth(cursor *args, **kwargs)
+			meth(cursor=cursor, *args, **kwargs)
 
 	def queue_shift(self, cursor):
 		cursor.execute("""
