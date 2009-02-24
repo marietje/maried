@@ -1,0 +1,156 @@
+definitions:
+  collection:
+    settings:
+      mediaStore: {type: mediaStore}
+  desk:
+    commutations:
+    - - [orchestrator, queue]
+      - [queue]
+    - - [collection, mediaStore]
+      - [mediaStore]
+    - - [orchestrator, random, collection]
+      - [collection]
+    implementedBy: maried.core.Desk
+    settings:
+      collection: {type: collection}
+      mediaStore: {type: mediaStore}
+      orchestrator: {type: orchestrator}
+      queue: {type: queue}
+      users: {type: users}
+  history:
+    implementedBy: maried.core.History
+  mediaInfo:
+    implementedBy: maried.core.MediaInfo
+  mediaStore:
+    implementedBy: maried.core.MediaStore
+    settings:
+      mediaInfo: {type: mediaInfo}
+  orchestrator:
+    commutations:
+    - - [random, history]
+      - [history]
+    implementedBy: maried.core.Orchestrator
+    run: true
+    settings:
+      history: {type: history}
+      player: {type: player}
+      queue: {type: queue}
+      random: {type: random}
+  player:
+    implementedBy: maried.core.Player
+  queue:
+    implementedBy: maried.core.Queue
+  random:
+    implementedBy: maried.core.Random
+    settings:
+      collection: {type: collection}
+      history: {type: history}
+  requestServer:
+    implementedBy: maried.core.RequestServer
+    run: true
+    settings:
+      desk: {type: desk}
+  screen:
+    implementedBy: maried.core.Screen
+    run: true
+    settings:
+      desk: {type: desk}
+  users:
+    implementedBy: maried.core.Users
+  classicCollection:
+    implementedBy: maried.classic.ClassicCollection
+    inherits: [collection]
+    settings:
+      classicDb: {type: classicDb}
+  classicDb:
+    implementedBy: maried.classic.ClassicDb
+    settings:
+      username: {type: str}
+      password: {type: str}
+      database: {type: str}
+  classicDesk:
+    implementedBy: maried.classic.ClassicDesk
+    inherits: [desk]
+  classicHistory:
+    implementedBy: maried.classic.ClassicHistory
+    inherits: [history]
+    settings:
+      classicDb: {type: classicDb}
+  classicMediaInfo:
+    implementedBy: maried.classic.ClassicMediaInfo
+    inherits: [mediaInfo]
+  classicMediaStore:
+    implementedBy: maried.classic.ClassicMediaStore
+    inherits: [mediaStore]
+  classicOrchestrator:
+    implementedBy: maried.classic.ClassicOrchestrator
+    inherits: [orchestrator]
+  classicPlayer:
+    implementedBy: maried.classic.ClassicPlayer
+    inherits: [player]
+  classicQueue:
+    implementedBy: maried.classic.ClassicQueue
+    inherits: [queue]
+    settings:
+      classicDb: {type: classicDb}
+  classicRandom:
+    implementedBy: maried.classic.ClassicRandom
+    inherits: [random]
+  classicRequestServer:
+    implementedBy: maried.classic.ClassicRequestServer
+    inherits: [requestServer]
+  classicScreen:
+    implementedBy: maried.classic.ClassicScreen
+    inherits: [screen]
+  classicUsers:
+    implementedBy: maried.classic.ClassicUsers
+    inherits: [users]
+    settings:
+      maxQueueLength: {type: int}
+      maxQueueCount: {type: int}
+instances:
+  classicDb:
+    module: classicDb
+  collection:
+    module: classicCollection
+    classicDb: classicDb
+    mediaStore: mediaStore
+  desk:
+    module: classicDesk
+    collection: collection
+    mediaStore: mediaStore
+    orchestrator: orchestrator
+    queue: queue
+    users: users
+  history:
+    module: classicHistory
+    classicDb: classicDb
+  mediaInfo:
+    module: classicMediaInfo
+  mediaStore:
+    module: classicMediaStore
+    mediaInfo: mediaInfo
+  orchestrator:
+    module: classicOrchestrator
+    history: history
+    player: player
+    queue: queue
+    random: random
+  player:
+    module: classicPlayer
+  queue:
+    module: classicQueue
+    classicDb: classicDb
+  random:
+    module: classicRandom
+    collection: collection
+    history: history
+  requestServer:
+    module: classicRequestServer
+    desk: desk
+  screen:
+    module: classicScreen
+    desk: desk
+  users:
+    module: classicUsers
+
