@@ -3,7 +3,9 @@ from __future__ import with_statement
 import threading
 import optparse
 import logging
+import os.path
 import yaml
+import os
 
 def _get_by_path(bits, _globals):
 	c = None
@@ -19,6 +21,15 @@ def get_by_path(path, _globals=None):
 	""" Returns an object by <path>, importing modules if necessary """
 	if _globals is None: _globals = list()
 	return _get_by_path(path.split('.'), _globals)
+
+def restricted_cover(l, succsOf):
+	""" Returns a restricted <succsOf> which only takes and yields
+	    values from <l> """
+	fzl = frozenset(l)
+	lut = dict()
+	for i in l:
+		lut[i] = fzl.intersection(succsOf(i))
+	return lambda x: lut[x]
 
 def dual_cover(l, succsOf):
 	""" <succsOf> assigns to each element of <l> a list of successors.
@@ -159,27 +170,50 @@ def module_definition_from_mirteFile_dict(man, d):
 				"No such module or valuetype %s" % v
 	return m
 
-def load_mirteFile(f, m, logger=None):
-	d = yaml.load(f)
-	defs = d['definitions']
-	insts = d['instances']
+def load_mirteFile(path, m, logger=None):
+	l = logging.getLogger('load_mirteFile') if logger is None else logger
+	for path, d in walk_mirteFiles(path):
+		l.info('loading %s' % path)
+		_load_mirteFile(d, m)
+
+def _load_mirteFile(d, m):
+	defs = d['definitions'] if 'definitions' in d else {}
+	insts = d['instances'] if 'instances' in d else {}
 	it = sort_by_successors(defs.keys(), dual_cover(defs.keys(),
-		depsOf_of_mirteFile_module_definition(defs)))
+		restricted_cover(defs.keys(),
+				 depsOf_of_mirteFile_module_definition(defs))))
 	for k in it:
 		m.add_module_definition(k,
 			module_definition_from_mirteFile_dict(m, defs[k]))
-	it = sort_by_successors(insts.keys(), dual_cover(insts.keys(),
-		depsOf_of_mirteFile_instance_definition(m, insts)))
+	it = sort_by_successors(insts.keys(),
+		dual_cover(insts.keys(), restricted_cover(insts.keys(),
+			depsOf_of_mirteFile_instance_definition(m, insts))))
 	for k in it:
 		settings = dict(insts[k])
 		del(settings['module'])
 		m.create_instance(k, insts[k]['module'], settings)
 
+def walk_mirteFiles(path):
+	stack = [path]
+	loadStack = []
+	while stack:
+		path = stack.pop()
+		with open(path) as f:
+			d = yaml.load(f)
+		loadStack.append((path, d))
+		if not 'includes' in d:
+			continue
+		for include in d['includes']:
+			stack.append(os.path.join(os.path.dirname(path),
+						  include))
+	for path, d in reversed(loadStack):
+		yield path, d
+
 def main():
 	logging.basicConfig(level=logging.DEBUG)
-	m = Manager(logging.getLogger('mirte'))
-	with open('core.mirte.yaml') as f:
-		load_mirteFile(f, m)
+	l = logging.getLogger('mirte')
+	m = Manager(l)
+	load_mirteFile('default.mirte.yaml', m, logger=l)
 
 if __name__ == '__main__':
 	main()
