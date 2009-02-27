@@ -1,0 +1,99 @@
+includes:
+  - core.mirte.yaml
+definitions:
+  classicCollection:
+    implementedBy: maried.classic.ClassicCollection
+    inherits: [collection]
+    settings:
+      classicDb: {type: classicDb}
+  classicDb:
+    implementedBy: maried.classic.ClassicDb
+    settings:
+      username: {type: str}
+      password: {type: str}
+      database: {type: str}
+  classicDesk:
+    implementedBy: maried.classic.ClassicDesk
+    inherits: [desk]
+  classicHistory:
+    implementedBy: maried.classic.ClassicHistory
+    inherits: [history]
+    settings:
+      classicDb: {type: classicDb}
+  classicMediaInfo:
+    implementedBy: maried.classic.ClassicMediaInfo
+    inherits: [mediaInfo]
+  classicMediaStore:
+    implementedBy: maried.classic.ClassicMediaStore
+    inherits: [mediaStore]
+  classicOrchestrator:
+    implementedBy: maried.classic.ClassicOrchestrator
+    inherits: [orchestrator]
+  classicPlayer:
+    implementedBy: maried.classic.ClassicPlayer
+    inherits: [player]
+  classicQueue:
+    implementedBy: maried.classic.ClassicQueue
+    inherits: [queue]
+    settings:
+      classicDb: {type: classicDb}
+  classicRandom:
+    implementedBy: maried.classic.ClassicRandom
+    inherits: [random]
+  classicRequestServer:
+    implementedBy: maried.classic.ClassicRequestServer
+    inherits: [requestServer]
+  classicScreen:
+    implementedBy: maried.classic.ClassicScreen
+    inherits: [screen]
+  classicUsers:
+    implementedBy: maried.classic.ClassicUsers
+    inherits: [users]
+    settings:
+      maxQueueLength: {type: int}
+      maxQueueCount: {type: int}
+instances:
+  classicDb:
+    module: classicDb
+  collection:
+    module: classicCollection
+    classicDb: classicDb
+    mediaStore: mediaStore
+  desk:
+    module: classicDesk
+    collection: collection
+    mediaStore: mediaStore
+    orchestrator: orchestrator
+    queue: queue
+    users: users
+  history:
+    module: classicHistory
+    classicDb: classicDb
+  mediaInfo:
+    module: classicMediaInfo
+  mediaStore:
+    module: classicMediaStore
+    mediaInfo: mediaInfo
+  orchestrator:
+    module: classicOrchestrator
+    history: history
+    player: player
+    queue: queue
+    random: random
+  player:
+    module: classicPlayer
+  queue:
+    module: classicQueue
+    classicDb: classicDb
+  random:
+    module: classicRandom
+    collection: collection
+    history: history
+  requestServer:
+    module: classicRequestServer
+    desk: desk
+  screen:
+    module: classicScreen
+    desk: desk
+  users:
+    module: classicUsers
