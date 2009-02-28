@@ -5,6 +5,7 @@ import optparse
 import logging
 import os.path
 import yaml
+import sys
 import os
 
 def _get_by_path(bits, _globals):
@@ -76,6 +77,7 @@ class ModuleDefinition(object):
 		self.vsettings = dict()
 		self.implementedBy = None
 		self.run = False
+		self.inherits = list()
 
 class Manager(object):
 	def __init__(self, logger=None):
@@ -121,12 +123,37 @@ class Manager(object):
 		il = logging.getLogger(name)
 		ii.settings = settings
 		ii.module = moduleName
+		ii.name = name
 		self.l.info('create_instance %-15s %s' % (
 				name, md.implementedBy))
 		ii.object = cl(settings, il)
 		if md.run:
 			ii.thread = threading.Thread(target=ii.object.run)
 			ii.thread.start()
+	
+	def change_setting(self, instance_name, key, raw_value):
+		ii = self.insts[instance_name]
+		mo = self.modules[ii.module]
+		if key in mo.deps:
+			if not raw_value in self.insts:
+				raise ValueError, "No such instance %s" % \
+						raw_value
+			vii = self.insts[raw_value]
+			vmo = self.modules[vii.module]
+			if not (mo.deps[key] in vmo.inherits or
+					mo.deps[key] == vii.module):
+				raise ValueError, "%s isn't a %s" % (
+						raw_value, mo.deps[key])
+			value = vii.object
+		elif key in mo.vsettings:
+			value = self.valueTypes[mo.vsettings[key]](raw_value)
+		else:
+			raise ValueError, "No such settings %s" % key
+		self.l.info("Changing %s.%s to %s" % (instance_name,
+						      key,
+						      raw_value))
+		ii.settings[key] = value
+		ii.object.change_setting(key, value)
 
 def depsOf_of_mirteFile_instance_definition(man, insts):
 	""" Returns a function that returns the dependencies of
@@ -154,11 +181,13 @@ def module_definition_from_mirteFile_dict(man, d):
 		m.implementedBy = d['implementedBy']
 	if 'run' in d and d['run']:
 		m.run = True
+	m.inherits = set(d['inherits'])
 	for p in d['inherits']:
 		if not p in man.modules:
 			raise ValueError, "No such module %s" % p
 		m.deps.update(man.modules[p].deps)
 		m.vsettings.update(man.modules[p].vsettings)
+		m.inherits.update(man.modules[p].inherits)
 		m.run = m.run or man.modules[p].run
 	for k, v in d['settings'].iteritems():
 		if v['type'] in man.modules:
@@ -209,11 +238,62 @@ def walk_mirteFiles(path):
 	for path, d in reversed(loadStack):
 		yield path, d
 
+def parse_cmdLine(args):
+	""" Parses commandline arguments into options and arguments """
+	options = dict()
+	rargs = list()
+	for arg in args:
+		if arg[:2] == '--':
+			tmp = arg[2:]
+			bits = tmp.split('=', 1)
+			if len(bits) == 1:
+				bits.append('')
+			options[bits[0]] = bits[1]
+		else:
+			rargs.append(arg)
+	return options, rargs
+
+def execute_cmdLine_options(options, m, l):
+	opt_lut = dict()
+	inst_lut = dict()
+	for k, v in options.iteritems():
+		bits = k.split('-', 1)
+		if len(bits) == 1:
+			inst_lut[bits[0]] = v
+		else:
+			if not bits[0] in opt_lut:
+				opt_lut[bits[0]] = list()
+			opt_lut[bits[0]].append((bits[1], v))
+	for k, v in inst_lut.iteritems():
+		if k in m.insts:
+			raise NotImplementedError, \
+				"Overwriting instancens not yet supported"
+		settings = dict()
+		if k in opt_lut:
+			for k2, v2 in opt_lut[k]:
+				settings[k2] = v2
+		m.create_instance(k, v, settings)
+	for k in opt_lut:
+		if k in inst_lut:
+			continue
+		for k2, v2 in opt_lut[k]:
+			_execute_cmdLine_option(k, k2, v2, m)
+
+def _execute_cmdLine_option(i, k, v, m):
+	if not i in m.insts:
+		raise ValueError, "No such instance %s" % i
+	c = m.insts[i]
+	mo = m.modules[c.module]
+	m.change_setting(c.name, k, v)
+
 def main():
 	logging.basicConfig(level=logging.DEBUG)
 	l = logging.getLogger('mirte')
+	options, args = parse_cmdLine(sys.argv[1:])
 	m = Manager(l)
-	load_mirteFile('default.mirte.yaml', m, logger=l)
+	path = args[0] if len(args) > 0 else 'default.mirte.yaml'
+	load_mirteFile(path, m, logger=l)
+	execute_cmdLine_options(options, m, l)
 
 if __name__ == '__main__':
 	main()
