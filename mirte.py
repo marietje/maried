@@ -132,6 +132,9 @@ class Manager(object):
 			ii.thread.start()
 	
 	def change_setting(self, instance_name, key, raw_value):
+		""" Change the settings <key> to <raw_value> of an instance
+		    named <instance_name>.  <raw_value> should be a string and
+		    is properly converted. """
 		ii = self.insts[instance_name]
 		mo = self.modules[ii.module]
 		if key in mo.deps:
@@ -174,6 +177,8 @@ def depsOf_of_mirteFile_module_definition(defs):
 			 (defs[x]['inherits'] if 'inherits' in defs[x] else [])
 
 def module_definition_from_mirteFile_dict(man, d):
+	""" Creates a ModuleDefinition instance from the dictionary <d> from
+	    a mirte-file for the Manager instance <man>. """
 	m = ModuleDefinition()
 	if not 'inherits' in d: d['inherits'] = list()
 	if not 'settings' in d: d['settings'] = dict()
@@ -200,12 +205,14 @@ def module_definition_from_mirteFile_dict(man, d):
 	return m
 
 def load_mirteFile(path, m, logger=None):
+	""" Loads the mirte-file at <path> into the manager <m>. """
 	l = logging.getLogger('load_mirteFile') if logger is None else logger
 	for path, d in walk_mirteFiles(path):
 		l.info('loading %s' % path)
 		_load_mirteFile(d, m)
 
 def _load_mirteFile(d, m):
+	""" Loads the dictionary from the mirteFile into <m> """
 	defs = d['definitions'] if 'definitions' in d else {}
 	insts = d['instances'] if 'instances' in d else {}
 	it = sort_by_successors(defs.keys(), dual_cover(defs.keys(),
@@ -223,6 +230,9 @@ def _load_mirteFile(d, m):
 		m.create_instance(k, insts[k]['module'], settings)
 
 def walk_mirteFiles(path):
+	""" Yields (cpath, d) for all dependencies of and including the
+	    mirte-file at <path>, where <d> are the dictionaries from
+	    the mirte-file at <cpath> """
 	stack = [path]
 	loadStack = []
 	while stack:
@@ -254,6 +264,7 @@ def parse_cmdLine(args):
 	return options, rargs
 
 def execute_cmdLine_options(options, m, l):
+	""" Applies the instructions given via <options> on the manager <m> """
 	opt_lut = dict()
 	inst_lut = dict()
 	for k, v in options.iteritems():
@@ -277,16 +288,12 @@ def execute_cmdLine_options(options, m, l):
 		if k in inst_lut:
 			continue
 		for k2, v2 in opt_lut[k]:
-			_execute_cmdLine_option(k, k2, v2, m)
-
-def _execute_cmdLine_option(i, k, v, m):
-	if not i in m.insts:
-		raise ValueError, "No such instance %s" % i
-	c = m.insts[i]
-	mo = m.modules[c.module]
-	m.change_setting(c.name, k, v)
+			if not k in m.insts:
+				raise ValueError, "No such instance %s" % k
+			m.change_setting(k, k2, v2)
 
 def main():
+	""" Entry-point """
 	logging.basicConfig(level=logging.DEBUG)
 	l = logging.getLogger('mirte')
 	options, args = parse_cmdLine(sys.argv[1:])
