@@ -9,6 +9,7 @@ definitions:
   classicDb:
     implementedBy: maried.classic.ClassicDb
     settings:
+      host: {type: str}
       username: {type: str}
       password: {type: str}
       database: {type: str}
@@ -55,6 +56,9 @@ definitions:
 instances:
   classicDb:
     module: classicDb
+    username: marietjed
+    host: localhost
+    database: marietjed
   collection:
     module: classicCollection
     classicDb: classicDb
@@ -97,3 +101,5 @@ instances:
     desk: desk
   users:
     module: classicUsers
+    maxQueueLength: 2700
+    maxQueueCount: 15
