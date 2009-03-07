@@ -5,7 +5,7 @@ definitions:
     implementedBy: maried.classic.ClassicCollection
     inherits: [collection]
     settings:
-      classicDb: {type: classicDb}
+      db: {type: classicDb}
   classicDb:
     implementedBy: maried.classic.ClassicDb
     settings:
@@ -20,7 +20,7 @@ definitions:
     implementedBy: maried.classic.ClassicHistory
     inherits: [history]
     settings:
-      classicDb: {type: classicDb}
+      db: {type: classicDb}
   classicMediaInfo:
     implementedBy: maried.classic.ClassicMediaInfo
     inherits: [mediaInfo]
@@ -37,7 +37,7 @@ definitions:
     implementedBy: maried.classic.ClassicQueue
     inherits: [queue]
     settings:
-      classicDb: {type: classicDb}
+      db: {type: classicDb}
   classicRandom:
     implementedBy: maried.classic.ClassicRandom
     inherits: [random]
@@ -61,7 +61,7 @@ instances:
     database: marietjed
   collection:
     module: classicCollection
-    classicDb: classicDb
+    db: classicDb
     mediaStore: mediaStore
   desk:
     module: classicDesk
@@ -72,7 +72,7 @@ instances:
     users: users
   history:
     module: classicHistory
-    classicDb: classicDb
+    db: classicDb
   mediaInfo:
     module: classicMediaInfo
   mediaStore:
@@ -88,7 +88,7 @@ instances:
     module: classicPlayer
   queue:
     module: classicQueue
-    classicDb: classicDb
+    db: classicDb
   random:
     module: classicRandom
     collection: collection
