@@ -4,6 +4,8 @@ import threading
 import optparse
 import logging
 import os.path
+import socket
+import select
 import yaml
 import sys
 import os
@@ -84,11 +86,14 @@ class Manager(object):
 		if logger is None:
 			logger = logging.getLogger(object.__repr__(self))
 		self.l = logger
+		self.running = False
 		self.modules = dict()
+		self.daemons = list()
 		self.valueTypes = {'str': str,
 				   'float': float,
 				   'int': int}
 		self.insts = dict()
+		self._sleep_socketpair = socket.socketpair()
 	
 	def add_module_definition(self, name, definition):
 		if name in self.modules:
@@ -128,8 +133,39 @@ class Manager(object):
 				name, md.implementedBy))
 		ii.object = cl(settings, il)
 		if md.run:
-			ii.thread = threading.Thread(target=ii.object.run)
+			self.daemons.append(name)
+	
+	def run(self):
+		def _daemon_entry(ii):
+			try:
+				ii.object.run()
+			except Exception:
+				self.l.exception("Module %s exited "+
+						 "abnormally" % ii.name)
+				return
+			self.l.info("Module %s exited normally" % ii.name)
+		assert not self.running
+		self.running = True
+		# Note that self.daemons is already dependency ordered for us
+		for name in self.daemons:
+			ii = self.insts[name]
+			ii.thread = threading.Thread(target=_daemon_entry,
+						     args=[ii])
 			ii.thread.start()
+		while self.running:
+			try:
+				select.select([self._sleep_socketpair[1]],
+					      [], [])
+			except KeyboardInterrupt:
+				self.l.warn("Keyboard interrupt")
+				self.running = False
+				break
+			self.l.info("Woke up from select")
+		for name in reversed(self.daemons):
+			ii = self.insts[name]
+			ii.object.stop()
+			self.l.info("Stopped and joining module %s" % ii.name)
+			ii.thread.join()
 	
 	def change_setting(self, instance_name, key, raw_value):
 		""" Change the settings <key> to <raw_value> of an instance
@@ -302,6 +338,7 @@ def main():
 	path = args[0] if len(args) > 0 else 'default.mirte.yaml'
 	load_mirteFile(path, m, logger=l)
 	execute_cmdLine_options(options, m, l)
+	m.run()
 
 if __name__ == '__main__':
 	main()

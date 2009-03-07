@@ -53,7 +53,7 @@ class Request(object):
 		self.queue.cancel(self)
 class User(object):
 	def __init__(self, key, realName):
-		self.realName = realname
+		self.realName = realName
 		self.key = key
 	
 
@@ -129,9 +129,13 @@ class Orchestrator(Module):
 			return (self.playing_media,
 				self.satisfied_request,
 				self.player.endTime)
+	def stop(self):
+		with self.lock:
+			self.running = False
+
 	def run(self):
 		self.running = True
-		while True:
+		while self.running:
 			with self.lock:
 				if not self.running: break
 				req = None
