@@ -36,6 +36,8 @@ class EmptyQueueException(Exception):
 class Media(object):
 	pass
 class MediaFile(object):
+	def open(self):
+		raise NotImplementedError
 	def remove(self):
 		self.store.remove(self)
 	def get_key(self):
@@ -132,6 +134,7 @@ class Orchestrator(Module):
 	def stop(self):
 		with self.lock:
 			self.running = False
+		self.player.stop()
 
 	def run(self):
 		self.running = True
