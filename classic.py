@@ -84,6 +84,7 @@ class ClassicRandom(Random):
 		self.collection.on_keys_changed.register(
 				self.on_collection_keys_changed)
 		self.keys = list()
+		self.on_collection_keys_changed()
 	
 	def on_collection_keys_changed(self):
 		self.keys = map(lambda x: x.get_key(),
@@ -104,10 +105,41 @@ class ClassicDb(Module):
 		#	pass
 		self.local = threading.local
 		self.on_change = Event()
+		self.connections = list()
+		self.creds_ok = False
+		for key in ('username', 'host', 'password', 'database'):
+			if not key in settings:
+				setattr(self, key, None)
+			self.register_on_setting_changed(key, self.osc_creds)
+		self.osc_creds()
+	
+	def test_credentials(self):
+		try:
+			with MySQLdb.connect(**self.credentials) as testConn:
+				pass
+		except MySQLdb.MySQLError:
+			self.l.exception('New credentials failed')
+			return False
+		return True
 
-	# TODO: consider abstracting this.
+	def osc_creds(self):
+		self.credentials = {'host': self.host,
+				    'user': self.username,
+				    'passwd': self.password,
+				    'db': self.database}
+		if (any(map(lambda x: x is None,
+				self.credentials.values())) or
+				not self.test_credentials()):
+			self.creds_ok = False
+			return
+		self.l.info("Credentials are OK!")
+		self.creds_ok = True
+		self.on_change()
+
 	def create_conn(self):
-		return MySQLdb.connect(self.con_params)
+		conn = MySQLdb.connect(**self.credentials)
+		self.connections.append(conn)
+		return conn
 
 	def get_conn(self):
 		try:
@@ -125,6 +157,12 @@ class ClassicDb(Module):
 	def with_cursor(self, meth, *args, **kwargs):
 		with self.cursor() as cursor:
 			meth(cursor=cursor, *args, **kwargs)
+	
+	def track_keys(self, cursor):
+		cursor.execute("""
+			SELECT trackId
+			FROM tracks;""")
+		return map(lambda x: x[0], cursor.fetchall())
 
 	def queue_shift(self, cursor):
 		cursor.execute("""
