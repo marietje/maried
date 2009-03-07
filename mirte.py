@@ -140,8 +140,8 @@ class Manager(object):
 			try:
 				ii.object.run()
 			except Exception:
-				self.l.exception("Module %s exited "+
-						 "abnormally" % ii.name)
+				self.l.exception(("Module %s exited "+
+						  "abnormally") % ii.name)
 				return
 			self.l.info("Module %s exited normally" % ii.name)
 		assert not self.running
