@@ -25,7 +25,7 @@ class Event(object):
 	def register(self, handler):
 		self.handlers.append(handler)
 	def __call__(self, *args, **kwargs):
-		for handler in handlers:
+		for handler in self.handlers:
 			handler(*args, **kwargs)
 
 class Denied(Exception):
