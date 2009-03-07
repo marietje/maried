@@ -2,7 +2,11 @@ from __future__ import with_statement
 
 from maried.core import *
 
+import time
+import socket
 import random
+import select
+import os.path
 import MySQLdb
 import threading
 import subprocess
@@ -31,6 +35,18 @@ class ClassicMedia(Media):
 
 	def __repr__(self):
 		return "<ClassicMedia %s - %s>" % (self.artist, self.title)
+
+class ClassicMediaFile(MediaFile):
+	def __init__(self, store, path, key):
+		self.store = store
+		self.path = path
+		self.key = key
+	
+	def open(self):
+		return open(self.path)
+	
+	def get_key(self):
+		return self.key
 
 class ClassicRequest(Request):
 	def __init__(self, queue, key, mediaKey, byKey):
@@ -103,17 +119,37 @@ class ClassicScreen(Module):
 	def stop(self):
 		pass
 
+class DummyPlayer(Module):
+	def __init__(self, settings, logger):
+		super(DummyPlayer, self).__init__(settings, logger)
+		self._sleep_socket = socket.socketpair()
+	def stop(self):
+		self._sleep_socket[0].send('good morning!')
+	def play(self, media):
+		select.select([self._sleep_socket[1]], [], [], media.length)
+
 class ClassicPlayer(Module):
 	def play(self, media):
-		self.l.info("Would be playing %s" % media)
-		import time
-		time.sleep(1)
+		try:
+			mf = media.mediaFile
+		except KeyError:
+			self.l.error("%s's mediafile doesn't exist" % media)
+			return
+		self.l.info("Playing %s" % media)
+		with mf.open() as f:
+			pipe = subprocess.Popen(['mpg123', '-'],
+						stdin=f.fileno())
+			pipe.wait()
 
 class ClassicMediaInfo(MediaInfo):
 	pass
 
 class ClassicMediaStore(MediaStore):
-	pass
+	def by_key(self, key):
+		p = os.path.join(self.path, key)
+		if not os.path.exists(p):
+			raise KeyError, key
+		return ClassicMediaFile(self, p, key)
 
 class ClassicCollection(Collection):
 	def __init__(self, settings, logger):

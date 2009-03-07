@@ -27,9 +27,14 @@ definitions:
   classicMediaStore:
     implementedBy: maried.classic.ClassicMediaStore
     inherits: [mediaStore]
+    settings:
+      path: {type: str}
   classicOrchestrator:
     implementedBy: maried.classic.ClassicOrchestrator
     inherits: [orchestrator]
+  dummyPlayer:
+    implementedBy: maried.classic.DummyPlayer
+    inherits: [player]
   classicPlayer:
     implementedBy: maried.classic.ClassicPlayer
     inherits: [player]
