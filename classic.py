@@ -5,6 +5,53 @@ from maried.core import *
 import random
 import MySQLdb
 import threading
+import subprocess
+
+class ClassicMedia(Media):
+	def __init__(self, coll, key, artist, title, length, mediaFileKey,
+			   uploadedByKey, uploadedTimestamp):
+		self.coll = coll
+		self.key = key
+		self.artist = artist
+		self.title = title
+		self.length = length
+		self.mediaFileKey = mediaFileKey
+		self.uploadedByKey = uploadedByKey
+		self.uploadedTimestamp = uploadedTimestamp
+	
+	@property
+	def uploadedBy(self):
+		return self.coll._user_by_key(self.uploadedByKey)
+	@property
+	def mediaFile(self):
+		return self.coll.mediaStore.by_key(self.mediaFileKey)
+	
+	def get_key(self):
+		return self.key
+
+	def __repr__(self):
+		return "<ClassicMedia %s - %s>" % (self.artist, self.title)
+
+class ClassicRequest(Request):
+	def __init__(self, queue, key, mediaKey, byKey):
+		self.queue = queue
+		self.key = key
+		self.mediaKey = mediaKey
+		self.byKey = byKey
+	
+	@property
+	def media(self):
+		return self.queue.collection.by_key(self.mediaKey)
+
+	@property
+	def by(self):
+		return self.queue.collection._user_by_key(self.byKey)
+
+class ClassicUser(User):
+	def __init__(self, coll, key, realName, level):
+		super(ClassicUser, self).__init__(key, realName)
+		self.level = level
+		self.coll = coll
 
 class ClassicUsers(Users):
 	def assert_request(self, user, media):
@@ -21,28 +68,25 @@ class ClassicUsers(Users):
 
 class ClassicQueue(Queue):
 	def request(self, media, user):
-		self.classicDb.queue_request(media, user)
+		self.db.queue_request(media, user)
 	def get_requests(self, media, user):
-		return self.classicDb.queue_get_requests()
+		return self.db.queue_get_requests()
 	def shift(self):
-		head = self.classicDb.queue_shift()
+		if not self.db.ready:
+			raise EmptyQueueException
+		tmp = self.db.queue_shift()
+		if tmp is None:
+			raise EmptyQueueException
+		return ClassicQueue(queue, *tmp)
 	def cancel(self, request):
 		raise NotImplementedError
 	def move(self, request, amount):
 		raise NotImplementedError
 	
-class ClassicRequest(Request):
-	def __init__(self, key, *args, **kwargs):
-		super(ClassicRequest, self).__init__(args, **kwargs)
-		self.key = key
-
-class MediaRequest(Request):
-	def __init__(self, key, *args, **kwargs):
-		super(MediaRequest, self).__init__(*args, **kwargs)
-		self.key = key
 
 class ClassicHistory(Module):
-	pass
+	def record(self, media, request):
+		self.l.info("%s: %s" % (media, request))
 
 class ClassicDesk(Desk):
 	pass
@@ -50,13 +94,20 @@ class ClassicDesk(Desk):
 class ClassicRequestServer(Module):
 	def run(self):
 		pass
+	def stop(self):
+		pass
 
 class ClassicScreen(Module):
 	def run(self):
 		pass
+	def stop(self):
+		pass
 
 class ClassicPlayer(Module):
-	pass
+	def play(self, media):
+		self.l.info("Would be playing %s" % media)
+		import time
+		time.sleep(1)
 
 class ClassicMediaInfo(MediaInfo):
 	pass
@@ -67,16 +118,44 @@ class ClassicMediaStore(MediaStore):
 class ClassicCollection(Collection):
 	def __init__(self, settings, logger):
 		super(ClassicCollection, self).__init__(settings, logger)
+		self.media = None
+		# notice on locking;
+		#  we assume self.media won't turn into None and that wrong
+		#  reads aren't that bad.  We only lock concurrent writes.
+		self.lock = threading.Lock()
 		self.register_on_setting_changed('db', self.osc_db)
+		self.osc_db()
 	
 	def osc_db(self):
 		self.db.on_changed.register(self.on_db_changed)
 	
-	def oc_db_changed(self):
+	def on_db_changed(self):
+		if not self.db.ready:
+			return
+		with self.lock:
+			self.media = {}
+			for tmp in self.db.list_media():
+				self.media[tmp[0]] = ClassicMedia(self, *tmp)
+			self.users = {}
+			for tmp in self.db.list_users():
+				self.users[tmp[0]] = ClassicUser(self, *tmp)
 		self.on_keys_changed()
 	
 	def list_media(self):
-		return []
+		if self.media is None:
+			return list()
+		return media.itervalues()
+
+	def media_keys(self):
+		if self.media is None:
+			return list()
+		return self.media.keys()
+
+	def by_key(self, key):
+		return self.media[key]
+
+	def _user_by_key(self, key):
+		return self.users[key]
 
 class ClassicRandom(Random):
 	def __init__(self, settings, logger):
@@ -87,24 +166,22 @@ class ClassicRandom(Random):
 		self.on_collection_keys_changed()
 	
 	def on_collection_keys_changed(self):
-		self.keys = map(lambda x: x.get_key(),
-				self.collection.list_media())
+		self.keys = self.collection.media_keys()
 
 	def pick(self):
+		if len(self.keys) == 0:
+			return None
 		key = self.keys[random.randint(0, len(self.keys) - 1)]
 		return self.collection.by_key(key)
 
 class ClassicOrchestrator(Orchestrator):
-	def run(self):
-		pass
+	pass
 
 class ClassicDb(Module):
 	def __init__(self, settings, logger):
 		super(ClassicDb, self).__init__(settings, logger)
-		#with  MySQLdb.connect(self.con_params) as testconn:
-		#	pass
-		self.local = threading.local
-		self.on_change = Event()
+		self.local = threading.local()
+		self.on_changed = Event()
 		self.connections = list()
 		self.creds_ok = False
 		for key in ('username', 'host', 'password', 'database'):
@@ -134,67 +211,80 @@ class ClassicDb(Module):
 			return
 		self.l.info("Credentials are OK!")
 		self.creds_ok = True
-		self.on_change()
+		self.on_changed()
 
 	def create_conn(self):
+		if not self.creds_ok:
+			raise ValueError, "Credentials aren't ok"
 		conn = MySQLdb.connect(**self.credentials)
 		self.connections.append(conn)
 		return conn
 
-	def get_conn(self):
+	@property
+	def conn(self):
 		try:
 			self.local.conn
 		except AttributeError:
-			self.local.conn = self.create_conn(self)
+			self.local.conn = self.create_conn()
 		return self.local.conn
 
-	conn = property(get_conn)
-	
+	@property
+	def ready(self):
+		return self.creds_ok
 
 	def cursor(self):
 		return self.conn.cursor()
 	
-	def with_cursor(self, meth, *args, **kwargs):
-		with self.cursor() as cursor:
-			meth(cursor=cursor, *args, **kwargs)
-	
-	def track_keys(self, cursor):
-		cursor.execute("""
+	def media_keys(self, cursor=None):
+		c = self.cursor() if cursor is None else cursor
+		c.execute("""
 			SELECT trackId
 			FROM tracks;""")
-		return map(lambda x: x[0], cursor.fetchall())
+		ret = map(lambda x: x[0], c.fetchall())
+		if not cursor is None: cursor.close()
+		return ret
 
-	def queue_shift(self, cursor):
-		cursor.execute("""
-			SELECT requestId
+	def queue_shift(self, cursor=None):
+		c = self.cursor() if cursor is None else cursor
+		c.execute("""
+			SELECT requestId,
+			       trackId,
+			       requestedBy
 			FROM queue
 			WHERE played=0
 			ORDER BY requestId
 			LIMIT 0, 1;""")
-		rid, = cursor.fetchone()
-
-		cursor.execute("""
+		tmp = c.fetchone()
+		if tmp is None:
+			return None
+		requestId, trackId, byKey = tmp
+		c.execute("""
 			UPDATE queue
 			SET played=1
-			WHERE requestid=%s;""", rid)
-		return self.request(rid, cursor)
-	
-	def request(self, cursor, key):
-		cursor.execute("""
-			SELECT trackid, requestedby
-			FROM queue
-			WHERE played=1 AND requestid=%s;""", key)
-		tid, rbid = cursor.fetchone()
-		return ClassicRequest(key, self.media(cursor, tid), 
-				self.user(cursor, rbid))
+			WHERE requestid=%s;""", requestId)
+		ret = (requestId, trackId, byKey)
+		if not cursor is None: cursor.close()
+		return ret
 
-	def media(self, cursor, key):
-		raise NotImplementedError
+	def list_users(self, cursor=None):
+		c = self.cursor() if cursor is None else cursor
+		c.execute("""
+			SELECT username, fullName, level
+			FROM users; """)
+		for username, fullName, level in c.fetchall():
+			yield username, fullName, level
+		if not cursor is None: cursor.close()
+						    
 
-	def user(self, cursor, key):
-		raise NotImplementedError
-	
-	def queue_request(self, cursor, media, user):
-		raise NotImplementedError
-
-	
+	def list_media(self, cursor=None):
+		c = self.cursor() if cursor is None else cursor
+		c.execute("""
+			SELECT trackId, artist, title, length, fileName,
+			       uploadedBy, uploadedTimestamp
+			FROM tracks
+			WHERE deleted=0; """)
+		for (trackId, artist, title, length, fileName, uploadedBy,
+				uploadedTimestamp) in c.fetchall():
+			yield (trackId, artist, title, length, fileName,
+			       uploadedBy, uploadedTimestamp)
+		if not cursor is None: cursor.close()
