@@ -33,12 +33,12 @@ class ClassicQueue(Queue):
 	
 class ClassicRequest(Request):
 	def __init__(self, key, *args, **kwargs):
-		super(self.__class__, self).__init__(args, **kwargs)
+		super(ClassicRequest, self).__init__(args, **kwargs)
 		self.key = key
 
 class MediaRequest(Request):
 	def __init__(self, key, *args, **kwargs):
-		super(self.__class__, self).__init__(*args, **kwargs)
+		super(MediaRequest, self).__init__(*args, **kwargs)
 		self.key = key
 
 class ClassicHistory(Module):
@@ -65,14 +65,30 @@ class ClassicMediaStore(MediaStore):
 	pass
 
 class ClassicCollection(Collection):
-	pass
+	def __init__(self, settings, logger):
+		super(ClassicCollection, self).__init__(settings, logger)
+		self.register_on_setting_changed('db', self.osc_db)
+	
+	def osc_db(self):
+		self.db.on_changed.register(self.on_db_changed)
+	
+	def oc_db_changed(self):
+		self.on_keys_changed()
+	
+	def list_media(self):
+		return []
 
 class ClassicRandom(Random):
 	def __init__(self, settings, logger):
-		super(self.__class__, self).__init__(settings, logger)
+		super(ClassicRandom, self).__init__(settings, logger)
+		self.collection.on_keys_changed.register(
+				self.on_collection_keys_changed)
+		self.keys = list()
+	
+	def on_collection_keys_changed(self):
 		self.keys = map(lambda x: x.get_key(),
 				self.collection.list_media())
-		
+
 	def pick(self):
 		key = self.keys[random.randint(0, len(self.keys) - 1)]
 		return self.collection.by_key(key)
@@ -83,10 +99,11 @@ class ClassicOrchestrator(Orchestrator):
 
 class ClassicDb(Module):
 	def __init__(self, settings, logger):
-		super(self.__class__, self).__init__(settings, logger)
+		super(ClassicDb, self).__init__(settings, logger)
 		#with  MySQLdb.connect(self.con_params) as testconn:
 		#	pass
 		self.local = threading.local
+		self.on_change = Event()
 
 	# TODO: consider abstracting this.
 	def create_conn(self):

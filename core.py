@@ -6,9 +6,27 @@ class Module(object):
 		for k, v in settings.items():
 			setattr(self, k, v)
 		self.l = logger
+		self.on_settings_changed = dict()
 	
 	def change_setting(self, key, value):
 		setattr(self, key, value)
+		if not key in self.on_settings_changed:
+			return
+		self.on_settings_changed[key]()
+
+	def register_on_setting_changed(self, key, handler):
+		if not key in self.on_settings_changed:
+			self.on_settings_changed[key] = Event()
+		self.on_settings_changed[key].register(handler)
+
+class Event(object):
+	def __init__(self):
+		self.handlers = []
+	def register(self, handler):
+		self.handlers.append(handler)
+	def __call__(self, *args, **kwargs):
+		for handler in handlers:
+			handler(*args, **kwargs)
 
 class Denied(Exception):
 	pass
@@ -137,6 +155,9 @@ class MediaStore(Module):
 		raise NotImplementedError
 
 class Collection(Module):
+	def __init__(self, settings, logger):
+		super(Collection, self).__init__(settings, logger)
+		self.on_keys_changed = Event()
 	def add(self, mediaFile, user):
 		raise NotImplementedError
 	def list_media(self):
