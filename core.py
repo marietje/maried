@@ -38,7 +38,7 @@ class Media(object):
 class MediaFile(object):
 	def remove(self):
 		self.store.remove(self)
-	def get_hash(self):
+	def get_key(self):
 		raise NotImplementedError
 class MediaFileInfo(object):
 	pass
@@ -51,6 +51,10 @@ class Request(object):
 		self.queue.move(self, amount)
 	def cancel(self):
 		self.queue.cancel(self)
+class User(object):
+	def __init__(self, key, realName):
+		self.realName = realname
+		self.key = key
 	
 
 class Desk(Module):
@@ -153,6 +157,8 @@ class MediaInfo(Module):
 class MediaStore(Module):
 	def create(self, stream):
 		raise NotImplementedError
+	def by_key(self, key):
+		raise NotImplementedError
 
 class Collection(Module):
 	def __init__(self, settings, logger):
@@ -161,6 +167,8 @@ class Collection(Module):
 	def add(self, mediaFile, user):
 		raise NotImplementedError
 	def list_media(self):
+		raise NotImplementedError
+	def media_keys(self):
 		raise NotImplementedError
 	def by_key(self, key):
 		raise NotImplementedError
