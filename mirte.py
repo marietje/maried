@@ -162,9 +162,10 @@ def depsOf_of_mirteFile_instance_definition(man, insts):
 	""" Returns a function that returns the dependencies of
 	    an instance definition by its name, where insts is a
 	    dictionary of instance definitions from a mirteFile """
-	return lambda x: filter(lambda y: y in \
+	return lambda x: map(lambda a: a[1],
+			     filter(lambda b: b[0] in \
 				man.modules[insts[x]['module']].deps,
-				insts[x].keys())
+				insts[x].items()))
 
 def depsOf_of_mirteFile_module_definition(defs):
 	""" Returns a function that returns the dependencies of a module
