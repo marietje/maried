@@ -1,2 +1,3 @@
 includes:
   - classic.mirte.yaml
+  - shell.mirte.yaml

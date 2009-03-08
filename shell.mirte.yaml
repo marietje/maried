@@ -1,0 +1,10 @@
+definitions:
+  shellServer:
+    implementedBy: maried.shell.ShellServer
+    settings:
+      socketPath: {type: str}
+    run: True
+instances:
+  shellServer:
+    module: shellServer
+    socketPath: maried.socket
