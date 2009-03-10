@@ -140,6 +140,9 @@ class ClassicPlayer(Module):
 			pipe = subprocess.Popen(['mpg123', '-'],
 						stdin=f.fileno())
 			pipe.wait()
+	def stop(self):
+		self.l.warn("You'll might have to wait -- we haven't " +
+			    "implemented a kill yet")
 
 class ClassicMediaInfo(MediaInfo):
 	pass
