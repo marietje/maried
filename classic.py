@@ -176,6 +176,11 @@ class ClassicCollection(Collection):
 			for tmp in self.db.list_users():
 				self.users[tmp[0]] = ClassicUser(self, *tmp)
 		self.on_keys_changed()
+		with self.lock:
+			if len(self.media) > 0:
+				self.got_media_event.set()
+			else:
+				self.got_media_event.clear()
 	
 	def list_media(self):
 		if self.media is None:
@@ -192,6 +197,9 @@ class ClassicCollection(Collection):
 
 	def _user_by_key(self, key):
 		return self.users[key]
+
+	def stop(self):
+		self.got_media_event.set()
 
 class ClassicRandom(Random):
 	def __init__(self, settings, logger):
