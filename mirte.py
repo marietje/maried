@@ -88,7 +88,8 @@ class Manager(object):
 		self.l = logger
 		self.running = False
 		self.modules = dict()
-		self.daemons = list()
+		self.to_stop = list() # objects to stop
+		self.daemons = list() # and to join
 		self.valueTypes = {'str': str,
 				   'float': float,
 				   'int': int}
@@ -133,7 +134,10 @@ class Manager(object):
 				name, md.implementedBy))
 		ii.object = cl(settings, il)
 		if md.run:
+			self.to_stop.append(name)
 			self.daemons.append(name)
+		elif hasattr(ii.object, 'stop'):
+			self.to_stop.append(name)
 	
 	def run(self):
 		def _daemon_entry(ii):
@@ -161,10 +165,14 @@ class Manager(object):
 				self.running = False
 				break
 			self.l.info("Woke up from select")
-		for name in reversed(self.daemons):
+		self.l.info("Stopping modules")
+		for name in reversed(self.to_stop):
 			ii = self.insts[name]
+			self.l.info("  %s" % ii.name)
 			ii.object.stop()
-			self.l.info("Stopped and joining module %s" % ii.name)
+		self.l.info("Joining modules")
+		for name in reversed(self.daemons):
+			self.l.info("  %s" % ii.name)
 			ii.thread.join()
 	
 	def change_setting(self, instance_name, key, raw_value):
