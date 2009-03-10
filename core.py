@@ -145,13 +145,23 @@ class Orchestrator(Module):
 				try:
 					req = self.queue.shift()
 					media = req.media
+					assert not media is None
 				except EmptyQueueException:
 					media = self.random.pick()
 				self.playing_media = media
 				self.satisfied_request = req
+			if media is None:
+				self.wait_for_media()
+				continue
 			self.history.record(self.playing_media,
 					    self.satisfied_request)
 			self.player.play(media)
+	
+	def wait_for_media(self):
+		self.l.info("Random couldn't return media -- collection "+
+			    "is assumed to be empty -- waiting for media.")
+		self.random.collection.got_media_event.wait()
+		self.l.info("Woke!")
 
 class Random(Module):
 	def pick(self):
@@ -171,6 +181,9 @@ class Collection(Module):
 	def __init__(self, settings, logger):
 		super(Collection, self).__init__(settings, logger)
 		self.on_keys_changed = Event()
+		# got_media_event is set when the Collection isn't
+		# empty.
+		self.got_media_event = threading.Event()
 	def add(self, mediaFile, user):
 		raise NotImplementedError
 	def list_media(self):
