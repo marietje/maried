@@ -172,6 +172,7 @@ class Manager(object):
 			ii.object.stop()
 		self.l.info("Joining modules")
 		for name in reversed(self.daemons):
+			ii = self.insts[name]
 			self.l.info("  %s" % ii.name)
 			ii.thread.join()
 	
