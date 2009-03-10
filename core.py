@@ -134,7 +134,6 @@ class Orchestrator(Module):
 	def stop(self):
 		with self.lock:
 			self.running = False
-		self.player.stop()
 
 	def run(self):
 		self.running = True
