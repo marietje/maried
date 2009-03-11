@@ -43,12 +43,16 @@ definitions:
     inherits: [queue]
     settings:
       db: {type: classicDb}
+      collection: {type: classicCollection }
   classicRandom:
     implementedBy: maried.classic.ClassicRandom
     inherits: [random]
   classicRequestServer:
     implementedBy: maried.classic.ClassicRequestServer
     inherits: [requestServer]
+    settings:
+      host: { type: str }
+      port: { type: int }
   classicScreen:
     implementedBy: maried.classic.ClassicScreen
     inherits: [screen]
@@ -58,6 +62,7 @@ definitions:
     settings:
       maxQueueLength: {type: int}
       maxQueueCount: {type: int}
+      collection: {type: classicCollection}
 instances:
   classicDb:
     module: classicDb
@@ -94,6 +99,7 @@ instances:
   queue:
     module: classicQueue
     db: classicDb
+    collection: collection
   random:
     module: classicRandom
     collection: collection
@@ -101,10 +107,13 @@ instances:
   requestServer:
     module: classicRequestServer
     desk: desk
+    host: localhost
+    port: 1337
   screen:
     module: classicScreen
     desk: desk
   users:
     module: classicUsers
+    collection: collection
     maxQueueLength: 2700
     maxQueueCount: 15

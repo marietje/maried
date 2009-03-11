@@ -57,6 +57,8 @@ class User(object):
 	def __init__(self, key, realName):
 		self.realName = realName
 		self.key = key
+	def has_access(self):
+		raise NotImplementedError
 	
 
 class Desk(Module):
@@ -83,6 +85,10 @@ class Desk(Module):
 		request.move(amount)
 	def get_playing(self):
 		return self.orchestrator.get_playing()
+	def user_by_key(self, key):
+		return self.users.by_key(key)
+	def media_by_key(self, key):
+		return self.collection.by_key(key)
 
 class Users(Module):
 	def assert_request(self, user, media):
@@ -93,6 +99,10 @@ class Users(Module):
 		raise NotImplementedError
 	def assert_move(self, user, request, amount):
 		raise NotImplementedError
+	def assert_access(self, user):
+		return NotImplementedError
+	def user_by_key(self, key):
+		return NotImplementedError
 
 class Queue(Module):
 	def __init__(self, settings, logger):

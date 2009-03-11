@@ -1,13 +1,17 @@
 from __future__ import with_statement
 
 from maried.core import *
+from maried.io import IntSocketFile
 
 import time
 import socket
+import select
 import random
 import select
 import os.path
 import MySQLdb
+import logging
+import datetime
 import threading
 import subprocess
 
@@ -68,10 +72,13 @@ class ClassicUser(User):
 		super(ClassicUser, self).__init__(key, realName)
 		self.level = level
 		self.coll = coll
+	def has_access(self):
+		return self.level >= 2
+	def get_key(self):
+		return self.key
 
 class ClassicUsers(Users):
 	def assert_request(self, user, media):
-		reqs = self.queue.get_requests()
 		# blaat die blaat
 		return True
 	def assert_addition(self, user, mediaFile):
@@ -81,24 +88,28 @@ class ClassicUsers(Users):
 		return True
 	def assert_move(self, user, request, amount):
 		return True
+	def by_key(self, key):
+		return self.collection._user_by_key(key)
 
 class ClassicQueue(Queue):
 	def request(self, media, user):
-		self.db.queue_request(media, user)
-	def get_requests(self, media, user):
-		return self.db.queue_get_requests()
+		self.db.queue_request(media.get_key(), user.get_key())
+	def get_requests(self):
+		ret = list()
+		for tmp in self.db.queue_get_requests():
+			ret.append(ClassicRequest(self, *tmp))
+		return ret
 	def shift(self):
 		if not self.db.ready:
 			raise EmptyQueueException
 		tmp = self.db.queue_shift()
 		if tmp is None:
 			raise EmptyQueueException
-		return ClassicQueue(queue, *tmp)
+		return ClassicRequest(self, *tmp)
 	def cancel(self, request):
 		raise NotImplementedError
 	def move(self, request, amount):
 		raise NotImplementedError
-	
 
 class ClassicHistory(Module):
 	def record(self, media, request):
@@ -108,10 +119,155 @@ class ClassicDesk(Desk):
 	pass
 
 class ClassicRequestServer(Module):
+	def _handle_list_queue(self, conn, addr, l, f, cmd):
+		queue = self.desk.list_requests()
+		endTime = self.desk.get_playing()[2]
+		timeLeft = int(time.mktime(endTime.timetuple()) -
+			time.mktime(datetime.datetime.now().timetuple()))
+		l.debug(str(timeLeft))
+		f.write("TOTAL::%s::TIMELEFT::%s\n" % (len(queue),
+						       int(timeLeft)))
+		for req in queue:
+			media = req.media
+			f.write("SONG::%s::%s::%s::%s\n" % (media.artist,
+							    media.title,
+							    media.length,
+							    req.by.get_key()))
+
+	def _handle_nowplaying(self, conn, addr, l, f, cmd):
+		media, request, endTime = self.desk.get_playing()
+		endTimeTS = int(time.mktime(endTime.timetuple()) - media.length)
+		timeTS = int(time.mktime(datetime.datetime.now().timetuple()))
+		f.write( "ID::%s::Timestamp::%s::Length::%s::Time::%s\n" % (
+				media.get_key(),
+				endTimeTS,
+				media.length,
+				timeTS))
+
+	def _handle_list_all(self, conn, addr, l, f, cmd):
+		media_l = list(self.desk.list_media())
+		f.write("TOTAL::%s\n" % len(media_l))
+		for media in media_l:
+			f.write("SONG::%s::%s::%s::%s\n" % (
+					media.get_key(),
+					media.artist,
+					media.title,
+					0))
+
+	def _handle_login_user(self, conn, addr, l, f, cmd):
+		key = cmd.strip().split('::', 2)[-1]
+		try:
+			user = self.desk.user_by_key(key)
+		except KeyError:
+			f.write("User doesn't exist\n")
+			self.l.warn("User doesn't exist %s" % key)
+			return
+		if not user.has_access():
+			f.write("Access denied\n")
+			self.l.warn("User hasn't got access %s" % user)
+			return
+		f.write("LOGIN::SUCCESS\n")
+
+	def _handle_request_song(self, conn, addr, l, f, cmd):
+		bits = cmd.strip().split('::')
+		if len(bits) != 5:
+			f.write("Wrong number of arguments\n")
+			self.l.warn("Wrong number of arguments %s" % repr(cmd))
+			return
+		songKey = int(bits[2])
+		userKey = bits[4]
+		try:
+			user = self.desk.user_by_key(userKey)
+		except KeyError:
+			f.write("User doesn't exist\n")
+			self.l.warn("User doesn't exist %s" % userKey)
+			return
+		try:
+			media = self.desk.media_by_key(songKey)
+		except KeyError:
+			f.write("Song doens't exist\n")
+			self.l.warn("Song doesn't exist %s" % songKey)
+			return
+		self.desk.request_media(media, user)
+		f.write("REQUEST::SUCCESS")
+
+	def _dispatch_request(self, conn, addr, n):
+		try:
+			l = logging.getLogger("%s.%s" % (self.l.name, n))
+			l.debug("Connecting from %s" % repr(addr))
+			f = IntSocketFile(conn)
+			with self.lock:
+				self.connections.add(f)
+			cmd = f.readsome()
+			l.debug("%s %s" % (repr(addr), repr(cmd)))
+			handler = None
+			for key in self.cmd_map:
+				if cmd[:len(key)] == key:
+					handler = self.cmd_map[cmd[:len(key)]]
+					break
+			if handler is None:
+				l.warn("Unknown command %s" % repr(cmd))
+			else:
+				handler(conn, addr, l, f, cmd)
+		finally:
+			with self.lock:
+				self.connections.remove(f)
+			conn.close()
+			l.debug("Bye!")
+
+	def __init__(self, settings, logger):
+		super(ClassicRequestServer, self).__init__(settings, logger)
+		self.running = False
+		self.connections = set()
+		self.lock = threading.Lock()
+		self._sleep_socket_pair = socket.socketpair()
+		self.n_conn = 0
+		self.cmd_map = {'LIST::QUEUE\n': self._handle_list_queue,
+				'LIST::NOWPLAYING\n': self._handle_nowplaying,
+				'LIST::ALL': self._handle_list_all,
+				'REQUEST::SONG::': self._handle_request_song,
+				'LOGIN::USER::': self._handle_login_user}
+		
+	def _inner_run(self):
+		rlist, wlist, xlist = select.select(
+				[self._sleep_socket_pair[1],
+				 self.socket], [],
+				[self.socket])
+		self.l.debug("Accept select wake")
+		if self._sleep_socket_pair[1] in rlist:
+			return True
+		if self.socket in xlist:
+			raise IOError, "Accept socket in select clist"
+		if not self.socket in rlist:
+			return False
+		conn, addr = self.socket.accept()
+		self.n_conn += 1
+		t = threading.Thread(target=self._dispatch_request,
+				     args=(conn, addr, self.n_conn))
+		t.start()
+		return False
+
 	def run(self):
-		pass
+		self.running = True
+		try:
+			s = self.socket = socket.socket(socket.AF_INET,
+							socket.SOCK_STREAM)
+			s.bind((self.host, self.port))
+			s.listen(3)
+			self.l.info("Listening on %s:%s" % (self.host, self.port))
+			while self.running:
+				if self._inner_run():
+					break
+		finally:
+			self.socket.close()
+			
 	def stop(self):
-		pass
+		self.running = False
+		self._sleep_socket_pair[0].send('Good morning!')
+		with self.lock:
+			conns = set(self.connections)
+		for conn in conns:
+			conn.interrupt()
 
 class ClassicScreen(Module):
 	def run(self):
@@ -126,10 +282,14 @@ class DummyPlayer(Module):
 	def stop(self):
 		self._sleep_socket[0].send('good morning!')
 	def play(self, media):
+		self.endTime = datetime.datetime.fromtimestamp(
+				time.time() + media.length)
 		select.select([self._sleep_socket[1]], [], [], media.length)
 
 class ClassicPlayer(Module):
 	def play(self, media):
+		self.endTime = datetime.datetime.fromtimestamp(
+				time.time() + media.length)
 		try:
 			mf = media.mediaFile
 		except KeyError:
@@ -178,6 +338,8 @@ class ClassicCollection(Collection):
 			self.users = {}
 			for tmp in self.db.list_users():
 				self.users[tmp[0]] = ClassicUser(self, *tmp)
+		self.l.info("Cached %s tracks, %s users" % (len(self.media),
+							    len(self.users)))
 		self.on_keys_changed()
 		with self.lock:
 			if len(self.media) > 0:
@@ -188,7 +350,7 @@ class ClassicCollection(Collection):
 	def list_media(self):
 		if self.media is None:
 			return list()
-		return media.itervalues()
+		return self.media.itervalues()
 
 	def media_keys(self):
 		if self.media is None:
@@ -308,10 +470,37 @@ class ClassicDb(Module):
 		c.execute("""
 			UPDATE queue
 			SET played=1
-			WHERE requestid=%s;""", requestId)
+			WHERE requestid=%s; commit; """, requestId)
 		ret = (requestId, trackId, byKey)
 		if not cursor is None: cursor.close()
 		return ret
+
+	def queue_get_requests(self, cursor=None):
+		c = self.cursor() if cursor is None else cursor
+		c.execute("""
+			SELECT requestId,
+			       trackId,
+			       requestedBy
+			FROM queue
+			WHERE played=0
+			ORDER BY requestId; """)
+		for requestId, trackId, requestedBy in c.fetchall():
+			yield requestId, trackId, requestedBy
+		if not cursor is None: cursor.close()
+	
+	def queue_request(self, media, user, cursor=None):
+		c = self.cursor() if cursor is None else cursor
+		c.execute("""
+			INSERT INTO `queue` (
+				`TrackID`,
+				`RequestedBy`,
+				`Played`)
+			VALUES (
+				%s,
+				%s,
+				%s); commit; """,
+			(media, user, 0))
+		if not cursor is None: cursor.close()
 
 	def list_users(self, cursor=None):
 		c = self.cursor() if cursor is None else cursor
@@ -321,7 +510,6 @@ class ClassicDb(Module):
 		for username, fullName, level in c.fetchall():
 			yield username, fullName, level
 		if not cursor is None: cursor.close()
-						    
 
 	def list_media(self, cursor=None):
 		c = self.cursor() if cursor is None else cursor
