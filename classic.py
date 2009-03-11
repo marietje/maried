@@ -52,6 +52,9 @@ class ClassicMediaFile(MediaFile):
 	def get_key(self):
 		return self.key
 
+	def __repr__(self):
+		return "<ClassicMediaFile %s>" % self.key
+
 class ClassicRequest(Request):
 	def __init__(self, queue, key, mediaKey, byKey):
 		self.queue = queue
@@ -67,6 +70,10 @@ class ClassicRequest(Request):
 	def by(self):
 		return self.queue.collection._user_by_key(self.byKey)
 
+	def __repr__(self):
+		return "<ClassicRequest %s - %s>" % (self.byKey,
+						     repr(self.media))
+
 class ClassicUser(User):
 	def __init__(self, coll, key, realName, level):
 		super(ClassicUser, self).__init__(key, realName)
@@ -76,6 +83,9 @@ class ClassicUser(User):
 		return self.level >= 2
 	def get_key(self):
 		return self.key
+	def __repr__(self):
+		return "<ClassicUser %s %s>" % (self.key,
+						self.realName)
 
 class ClassicUsers(Users):
 	def assert_request(self, user, media):
