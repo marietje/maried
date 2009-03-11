@@ -134,7 +134,6 @@ class ClassicRequestServer(Module):
 		endTime = self.desk.get_playing()[2]
 		timeLeft = int(time.mktime(endTime.timetuple()) -
 			time.mktime(datetime.datetime.now().timetuple()))
-		l.debug(str(timeLeft))
 		f.write("TOTAL::%s::TIMELEFT::%s\n" % (len(queue),
 						       int(timeLeft)))
 		for req in queue:
@@ -204,12 +203,11 @@ class ClassicRequestServer(Module):
 	def _dispatch_request(self, conn, addr, n):
 		try:
 			l = logging.getLogger("%s.%s" % (self.l.name, n))
-			l.debug("Connecting from %s" % repr(addr))
 			f = IntSocketFile(conn)
 			with self.lock:
 				self.connections.add(f)
 			cmd = f.readsome()
-			l.debug("%s %s" % (repr(addr), repr(cmd)))
+			l.info("%s %s" % (repr(addr), repr(cmd)))
 			handler = None
 			for key in self.cmd_map:
 				if cmd[:len(key)] == key:
@@ -223,7 +221,6 @@ class ClassicRequestServer(Module):
 			with self.lock:
 				self.connections.remove(f)
 			conn.close()
-			l.debug("Bye!")
 
 	def __init__(self, settings, logger):
 		super(ClassicRequestServer, self).__init__(settings, logger)
@@ -243,7 +240,6 @@ class ClassicRequestServer(Module):
 				[self._sleep_socket_pair[1],
 				 self.socket], [],
 				[self.socket])
-		self.l.debug("Accept select wake")
 		if self._sleep_socket_pair[1] in rlist:
 			return True
 		if self.socket in xlist:
