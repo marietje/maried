@@ -40,6 +40,11 @@ class ClassicMedia(Media):
 	def __repr__(self):
 		return "<ClassicMedia %s - %s>" % (self.artist, self.title)
 
+	def __eq__(self, other):
+		return self.key == other.key
+	def __ne__(self, other):
+		return self.key != other.key
+
 class ClassicMediaFile(MediaFile):
 	def __init__(self, store, path, key):
 		self.store = store
@@ -54,6 +59,10 @@ class ClassicMediaFile(MediaFile):
 
 	def __repr__(self):
 		return "<ClassicMediaFile %s>" % self.key
+	def __eq__(self, other):
+		return self.key == other.key
+	def __ne__(self, other):
+		return self.key != other.key
 
 class ClassicRequest(Request):
 	def __init__(self, queue, key, mediaKey, byKey):

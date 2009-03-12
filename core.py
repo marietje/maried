@@ -59,6 +59,10 @@ class User(object):
 		self.key = key
 	def has_access(self):
 		raise NotImplementedError
+	def __eq__(self, other):
+		self.key == other.key
+	def __ne__(self, other):
+		self.key != other.key
 	
 
 class Desk(Module):
