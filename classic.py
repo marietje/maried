@@ -373,9 +373,9 @@ class ClassicMediaStore(MediaStore):
 class ClassicCollection(Collection):
 	def __init__(self, settings, logger):
 		super(ClassicCollection, self).__init__(settings, logger)
-		self.media = None
+		self._media = None
 		# notice on locking;
-		#  we assume self.media won't turn into None and that wrong
+		#  we assume self._media won't turn into None and that wrong
 		#  reads aren't that bad.  We only lock concurrent writes.
 		self.lock = threading.Lock()
 		self.register_on_setting_changed('db', self.osc_db)
@@ -388,33 +388,35 @@ class ClassicCollection(Collection):
 		if not self.db.ready:
 			return
 		with self.lock:
-			self.media = {}
+			self._media = {}
 			for tmp in self.db.list_media():
-				self.media[tmp[0]] = ClassicMedia(self, *tmp)
+				self._media[tmp[0]] = ClassicMedia(self, *tmp)
 			self.users = {}
 			for tmp in self.db.list_users():
 				self.users[tmp[0]] = ClassicUser(self, *tmp)
-		self.l.info("Cached %s tracks, %s users" % (len(self.media),
+		self.l.info("Cached %s tracks, %s users" % (len(self._media),
 							    len(self.users)))
 		self.on_keys_changed()
 		with self.lock:
-			if len(self.media) > 0:
+			if len(self._media) > 0:
 				self.got_media_event.set()
 			else:
 				self.got_media_event.clear()
 	
-	def list_media(self):
-		if self.media is None:
+	@property
+	def media(self):
+		if self._media is None:
 			return list()
-		return self.media.itervalues()
+		return self._media.itervalues()
 
+	@property
 	def media_keys(self):
-		if self.media is None:
+		if self._media is None:
 			return list()
-		return self.media.keys()
+		return self._media.keys()
 
 	def by_key(self, key):
-		return self.media[key]
+		return self._media[key]
 
 	def _user_by_key(self, key):
 		return self.users[key]
@@ -431,7 +433,7 @@ class ClassicRandom(Random):
 		self.on_collection_keys_changed()
 	
 	def on_collection_keys_changed(self):
-		self.keys = self.collection.media_keys()
+		self.keys = self.collection.media_keys
 
 	def pick(self):
 		if len(self.keys) == 0:

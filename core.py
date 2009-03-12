@@ -67,7 +67,7 @@ class User(object):
 
 class Desk(Module):
 	def list_media(self):
-		return self.collection.list_media()
+		return self.collection.media
 	def request_media(self, media, user):
 		self.users.assert_request(user, media)
 		self.queue.request(media, user)
@@ -200,8 +200,10 @@ class Collection(Module):
 		self.got_media_event = threading.Event()
 	def add(self, mediaFile, user):
 		raise NotImplementedError
-	def list_media(self):
+	@property
+	def media(self):
 		raise NotImplementedError
+	@property
 	def media_keys(self):
 		raise NotImplementedError
 	def by_key(self, key):
