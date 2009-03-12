@@ -36,13 +36,20 @@ class EmptyQueueException(Exception):
 class Media(object):
 	pass
 class MediaFile(object):
+	def __init__(self, store, key):
+		self.key = _key
+		self.store = store
 	def open(self):
 		raise NotImplementedError
 	def remove(self):
 		self.store.remove(self)
+	def __eq__(self, other):
+		return self._key == other.key
+	def __ne__(self, other):
+		return self._key != other.key
 	@property
 	def key(self):
-		raise NotImplementedError
+		return self._key
 class MediaFileInfo(object):
 	pass
 class Request(object):

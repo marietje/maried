@@ -55,23 +55,12 @@ class ClassicMedia(Media):
 
 class ClassicMediaFile(MediaFile):
 	def __init__(self, store, path, key):
-		self.store = store
+		super(ClassicMediaFile, self).__init__(store, key)
 		self.path = path
-		self._key = key
-	
 	def open(self):
 		return open(self.path)
-	
-	@property
-	def key(self):
-		return self._key
-
 	def __repr__(self):
 		return "<ClassicMediaFile %s>" % self._key
-	def __eq__(self, other):
-		return self._key == other.key
-	def __ne__(self, other):
-		return self._key != other.key
 
 class ClassicRequest(Request):
 	def __init__(self, queue, key, mediaKey, byKey):
