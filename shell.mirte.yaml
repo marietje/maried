@@ -4,6 +4,7 @@ definitions:
     settings:
       socketPath: {type: str}
     run: True
+    revealManager: True
 instances:
   shellServer:
     module: shellServer

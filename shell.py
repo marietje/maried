@@ -110,7 +110,10 @@ class ShellServer(Module):
 	def _handle_request(self, con, addr, n_conn):
 		l = logging.getLogger("%s.%s" % (self.l.name, n_conn))
 		l.info('Accepted connection from %s' % addr)
-		console = SockConsole(con, {})
+		locals = {'manager': self.manager}
+		for k, ii in self.manager.insts.iteritems():
+			locals[k] = ii.object
+		console = SockConsole(con, locals)
 		with self.lock:
 			self.consoles.add(console)
 		try:
