@@ -40,7 +40,8 @@ class MediaFile(object):
 		raise NotImplementedError
 	def remove(self):
 		self.store.remove(self)
-	def get_key(self):
+	@property
+	def key(self):
 		raise NotImplementedError
 class MediaFileInfo(object):
 	pass
@@ -56,13 +57,13 @@ class Request(object):
 class User(object):
 	def __init__(self, key, realName):
 		self.realName = realName
-		self.key = key
+		self._key = key
 	def has_access(self):
 		raise NotImplementedError
 	def __eq__(self, other):
-		return self.key == other.key
+		return self._key == other.key
 	def __ne__(self, other):
-		return self.key != other.key
+		return self._key != other.key
 
 class Desk(Module):
 	def list_media(self):

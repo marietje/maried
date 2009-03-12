@@ -26,7 +26,7 @@ class ClassicMedia(Media):
 	def __init__(self, coll, key, artist, title, length, mediaFileKey,
 			   uploadedByKey, uploadedTimestamp):
 		self.coll = coll
-		self.key = key
+		self._key = key
 		self.artist = artist
 		self.title = title
 		self.length = length
@@ -41,40 +41,42 @@ class ClassicMedia(Media):
 	def mediaFile(self):
 		return self.coll.mediaStore.by_key(self.mediaFileKey)
 	
-	def get_key(self):
-		return self.key
+	@property
+	def key(self):
+		return self._key
 
 	def __repr__(self):
 		return "<ClassicMedia %s - %s>" % (self.artist, self.title)
 
 	def __eq__(self, other):
-		return self.key == other.key
+		return self._key == other.key
 	def __ne__(self, other):
-		return self.key != other.key
+		return self._key != other.key
 
 class ClassicMediaFile(MediaFile):
 	def __init__(self, store, path, key):
 		self.store = store
 		self.path = path
-		self.key = key
+		self._key = key
 	
 	def open(self):
 		return open(self.path)
 	
-	def get_key(self):
-		return self.key
+	@property
+	def key(self):
+		return self._key
 
 	def __repr__(self):
-		return "<ClassicMediaFile %s>" % self.key
+		return "<ClassicMediaFile %s>" % self._key
 	def __eq__(self, other):
-		return self.key == other.key
+		return self._key == other.key
 	def __ne__(self, other):
-		return self.key != other.key
+		return self._key != other.key
 
 class ClassicRequest(Request):
 	def __init__(self, queue, key, mediaKey, byKey):
 		self.queue = queue
-		self.key = key
+		self._key = key
 		self.mediaKey = mediaKey
 		self.byKey = byKey
 	
@@ -95,10 +97,11 @@ class ClassicUser(User):
 		super(ClassicUser, self).__init__(key, realName)
 		self.level = level
 		self.coll = coll
-	def get_key(self):
-		return self.key
+	@property
+	def key(self):
+		return self._key
 	def __repr__(self):
-		return "<ClassicUser %s %s>" % (self.key,
+		return "<ClassicUser %s %s>" % (self._key,
 						self.realName)
 	@property
 	def has_access(self):
@@ -138,7 +141,7 @@ class ClassicUsers(Users):
 
 class ClassicQueue(Queue):
 	def request(self, media, user):
-		self.db.queue_request(media.get_key(), user.get_key())
+		self.db.queue_request(media.key, user.key)
 	@property
 	def requests(self):
 		ret = list()
@@ -161,8 +164,8 @@ class ClassicHistory(Module):
 	def record(self, media, request):
 		self.l.info(repr(media if request is None else request))
 		timeStamp = int(time.time())
-		byKey = "Marietje" if request is None else request.by.get_key()
-		trackId = media.get_key()
+		byKey = "Marietje" if request is None else request.by.key
+		trackId = media.key
 		self.db.history_record(byKey, trackId, timeStamp)
 
 class ClassicDesk(Desk):
@@ -181,14 +184,14 @@ class ClassicRequestServer(Module):
 			f.write("SONG::%s::%s::%s::%s\n" % (media.artist,
 							    media.title,
 							    media.length,
-							    req.by.get_key()))
+							    req.by.key))
 
 	def _handle_nowplaying(self, conn, addr, l, f, cmd):
 		media, request, endTime = self.desk.get_playing()
 		endTimeTS = int(time.mktime(endTime.timetuple()) - media.length)
 		timeTS = int(time.mktime(datetime.datetime.now().timetuple()))
 		f.write( "ID::%s::Timestamp::%s::Length::%s::Time::%s\n" % (
-				media.get_key(),
+				media.key,
 				endTimeTS,
 				media.length,
 				timeTS))
@@ -198,7 +201,7 @@ class ClassicRequestServer(Module):
 		f.write("TOTAL::%s\n" % len(media_l))
 		for media in media_l:
 			f.write("SONG::%s::%s::%s::%s\n" % (
-					media.get_key(),
+					media.key,
 					media.artist,
 					media.title,
 					0))
