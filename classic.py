@@ -159,7 +159,11 @@ class ClassicQueue(Queue):
 
 class ClassicHistory(Module):
 	def record(self, media, request):
-		self.l.info("%s: %s" % (media, request))
+		self.l.info(repr(media if request is None else request))
+		timeStamp = int(time.time())
+		byKey = "Marietje" if request is None else request.by.get_key()
+		trackId = media.get_key()
+		self.db.history_record(byKey, trackId, timeStamp)
 
 class ClassicDesk(Desk):
 	pass
@@ -571,4 +575,20 @@ class ClassicDb(Module):
 				uploadedTimestamp) in c.fetchall():
 			yield (trackId, artist, title, length, fileName,
 			       uploadedBy, uploadedTimestamp)
+		if not cursor is None: cursor.close()
+
+	def history_record(self, byKey, trackId, timeStamp, cursor=None):
+		c = self.cursor() if cursor is None else cursor
+		c.execute("""
+			INSERT INTO `log` (
+				`Type`,
+				`Username`,
+				`TrackID`,
+				`Timestamp`)
+			VALUES (
+				'request',
+				%s,
+				%s,
+				%s); commit; """,
+			(byKey, trackId, timeStamp))
 		if not cursor is None: cursor.close()
