@@ -76,7 +76,7 @@ class Desk(Module):
 			raise
 		self.collection.add(mediaFile, user)
 	def list_requests(self):
-		return self.queue.get_requests()
+		return self.queue.requests
 	def cancel_request(self, request, user):
 		self.users.assert_cancel(user, request)
 		request.cancel()
@@ -112,7 +112,8 @@ class Queue(Module):
 	def request(self, media, user):
 		with self.lock:
 			self.list.insert(0, Request(self, media, user))
-	def get_requests(self, media, user):
+	@property
+	def requests(self):
 		with self.lock:
 			return reversed(self.list)
 	def shift(self):

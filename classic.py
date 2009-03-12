@@ -96,7 +96,7 @@ class ClassicUser(User):
 
 class ClassicUsers(Users):
 	def assert_request(self, user, media):
-		requests = self.queue.get_requests()
+		requests = self.queue.requests
 		if any(lambda x: x.media == media, requests):
 			return False
 		ureqs = filter(lambda y: y.by == user, requests)
@@ -121,7 +121,8 @@ class ClassicUsers(Users):
 class ClassicQueue(Queue):
 	def request(self, media, user):
 		self.db.queue_request(media.get_key(), user.get_key())
-	def get_requests(self):
+	@property
+	def requests(self):
 		ret = list()
 		for tmp in self.db.queue_get_requests():
 			ret.append(ClassicRequest(self, *tmp))
