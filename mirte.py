@@ -340,7 +340,8 @@ def execute_cmdLine_options(options, m, l):
 
 def main():
 	""" Entry-point """
-	logging.basicConfig(level=logging.DEBUG)
+	logging.basicConfig(level=logging.DEBUG,
+	    format="%(relativeCreated)d %(levelname)s:%(name)s:%(message)s")
 	l = logging.getLogger('mirte')
 	options, args = parse_cmdLine(sys.argv[1:])
 	m = Manager(l)
