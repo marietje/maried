@@ -79,6 +79,7 @@ class ModuleDefinition(object):
 		self.vsettings = dict()
 		self.implementedBy = None
 		self.run = False
+		self.revealManager = False
 		self.inherits = list()
 
 class Manager(object):
@@ -113,6 +114,8 @@ class Manager(object):
 				"There's no module %s" % moduleName
 		md = self.modules[moduleName]
 		ii = self.insts[name] = InstanceInfo()
+		if md.revealManager:
+			settings['manager'] = self
 		for k, v in md.deps.iteritems():
 			if not k in settings:
 				raise ValueError, "Missing setting %s" % k
@@ -232,6 +235,8 @@ def module_definition_from_mirteFile_dict(man, d):
 		m.implementedBy = d['implementedBy']
 	if 'run' in d and d['run']:
 		m.run = True
+	if 'revealManager' in d and d['revealManager']:
+		m.revealManager = True
 	m.inherits = set(d['inherits'])
 	for p in d['inherits']:
 		if not p in man.modules:
@@ -240,6 +245,8 @@ def module_definition_from_mirteFile_dict(man, d):
 		m.vsettings.update(man.modules[p].vsettings)
 		m.inherits.update(man.modules[p].inherits)
 		m.run = m.run or man.modules[p].run
+		m.revealManager = (m.revealManager or
+				man.modules[p].revealManager)
 	for k, v in d['settings'].iteritems():
 		if v['type'] in man.modules:
 			m.deps[k] = v['type']
