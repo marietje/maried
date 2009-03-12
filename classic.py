@@ -97,12 +97,13 @@ class ClassicUser(User):
 class ClassicUsers(Users):
 	def assert_request(self, user, media):
 		requests = self.queue.requests
-		if any(lambda x: x.media == media, requests):
+		if any(map(lambda x: x.media == media, requests)):
 			return False
 		ureqs = filter(lambda y: y.by == user, requests)
 		if len(ureqs) > self.maxQueueCount:
 			return False
-		if sum(lambda x: x.media.length, ureqs) > self.maxQueueLength:
+		if (sum(map(lambda x: x.media.length, ureqs)) > 
+				self.maxQueueLength):
 			return False
 		return True
 	def assert_addition(self, user, mediaFile):
