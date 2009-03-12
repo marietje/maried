@@ -60,10 +60,9 @@ class User(object):
 	def has_access(self):
 		raise NotImplementedError
 	def __eq__(self, other):
-		self.key == other.key
+		return self.key == other.key
 	def __ne__(self, other):
-		self.key != other.key
-	
+		return self.key != other.key
 
 class Desk(Module):
 	def list_media(self):

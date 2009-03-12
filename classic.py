@@ -15,6 +15,13 @@ import datetime
 import threading
 import subprocess
 
+class AlreadyInQueueError(Denied):
+	pass
+class MaxQueueLengthExceededError(Denied):
+	pass
+class MaxQueueCountExceededError(Denied):
+	pass
+
 class ClassicMedia(Media):
 	def __init__(self, coll, key, artist, title, length, mediaFileKey,
 			   uploadedByKey, uploadedTimestamp):
@@ -107,24 +114,25 @@ class ClassicUsers(Users):
 	def assert_request(self, user, media):
 		requests = self.queue.requests
 		if any(map(lambda x: x.media == media, requests)):
-			return False
+			raise AlreadyInQueueError
 		ureqs = filter(lambda y: y.by == user, requests)
 		if len(ureqs) > self.maxQueueCount:
-			return False
+			raise MaxQueueCountExceededError
 		if (sum(map(lambda x: x.media.length, ureqs)) > 
 				self.maxQueueLength):
-			return False
-		return True
+			raise MaxQueueLengthExceededError
 	def assert_addition(self, user, mediaFile):
-		return True
+		pass
 	def assert_cancel(self, user, request):
 		if request.by == user:
-			return True
-		return user.may_cancel
+			return
+		if not user.may_cancel:
+			raise Denied
 	def assert_move(self, user, request, amount):
 		if request.by == user and amount < 0:
-			return True
-		return user.may_move
+			return
+		if not user.may_move:
+			raise Denied
 	def by_key(self, key):
 		return self.collection._user_by_key(key)
 
@@ -225,7 +233,14 @@ class ClassicRequestServer(Module):
 			f.write("Song doens't exist\n")
 			self.l.warn("Song doesn't exist %s" % songKey)
 			return
-		self.desk.request_media(media, user)
+		try:
+			self.desk.request_media(media, user)
+		except AlreadyInQueueError:
+			f.write('ERROR::Track already in queue')
+			return
+		except Denied, e:
+			f.write("ERROR::%s" % e)
+			return
 		f.write("REQUEST::SUCCESS")
 
 	def _dispatch_request(self, conn, addr, n):
