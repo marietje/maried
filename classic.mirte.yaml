@@ -63,6 +63,7 @@ definitions:
       maxQueueLength: {type: int}
       maxQueueCount: {type: int}
       collection: {type: classicCollection}
+      queue: {type: classicQueue}
 instances:
   classicDb:
     module: classicDb
@@ -115,5 +116,6 @@ instances:
   users:
     module: classicUsers
     collection: collection
+    queue: queue
     maxQueueLength: 2700
     maxQueueCount: 15

@@ -79,25 +79,42 @@ class ClassicUser(User):
 		super(ClassicUser, self).__init__(key, realName)
 		self.level = level
 		self.coll = coll
-	def has_access(self):
-		return self.level >= 2
 	def get_key(self):
 		return self.key
 	def __repr__(self):
 		return "<ClassicUser %s %s>" % (self.key,
 						self.realName)
+	@property
+	def has_access(self):
+		return self.level >= 2
+	@property
+	def may_cancel(self):
+		return self.level >= 3
+	@property
+	def may_move(self):
+		return self.level >= 3
 
 class ClassicUsers(Users):
 	def assert_request(self, user, media):
-		# blaat die blaat
+		requests = self.queue.get_requests()
+		if any(lambda x: x.media == media, requests):
+			return False
+		ureqs = filter(lambda y: y.by == user, requests)
+		if len(ureqs) > self.maxQueueCount:
+			return False
+		if sum(lambda x: x.media.length, ureqs) > self.maxQueueLength:
+			return False
 		return True
 	def assert_addition(self, user, mediaFile):
-		# blaat die blaat
 		return True
 	def assert_cancel(self, user, request):
-		return True
+		if request.by == user:
+			return True
+		return user.may_cancel
 	def assert_move(self, user, request, amount):
-		return True
+		if request.by == user and amount < 0:
+			return True
+		return user.may_move
 	def by_key(self, key):
 		return self.collection._user_by_key(key)
 
@@ -171,7 +188,7 @@ class ClassicRequestServer(Module):
 			f.write("User doesn't exist\n")
 			self.l.warn("User doesn't exist %s" % key)
 			return
-		if not user.has_access():
+		if not user.has_access:
 			f.write("Access denied\n")
 			self.l.warn("User hasn't got access %s" % user)
 			return
