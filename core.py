@@ -1,4 +1,5 @@
 from __future__ import with_statement
+import tempfile
 import threading
 
 class Module(object):
@@ -50,8 +51,6 @@ class MediaFile(object):
 	@property
 	def key(self):
 		return self._key
-class MediaFileInfo(object):
-	pass
 class Request(object):
 	def __init__(self, queue, media, by):
 		self.queue = queue
@@ -190,7 +189,7 @@ class Random(Module):
 
 class MediaInfo(Module):
 	def get_info(self, stream):
-		raise NotImplementedError
+		pass
 
 class MediaStore(Module):
 	def create(self, stream):

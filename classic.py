@@ -350,7 +350,14 @@ class ClassicPlayer(Module):
 			    "implemented a kill yet")
 
 class ClassicMediaInfo(MediaInfo):
-	pass
+	def get_info_by_path(self, path):
+		p = subprocess.Popen(['mp3info', path, '-p', '%a\\n%t\\n%S'],
+				     stdout=subprocess.PIPE)
+		artist, title, length = p.read().split("\n")
+		length = int(length)
+		return {'artist':	artist,
+			'title':	title,
+			'length': 	length}
 
 class ClassicMediaStore(MediaStore):
 	def by_key(self, key):
