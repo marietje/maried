@@ -39,8 +39,8 @@ class IntSocketFile(object):
 				raise IOError
 			if not self.socket in wlist:
 				continue
-			written = self.socket.send(v)
-			if written == 0:
+			written = self.socket.send(to_write)
+			if written <= 0:
 				raise IOError
 			to_write = to_write[written:]
 	def read(self, n):
