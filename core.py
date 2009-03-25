@@ -74,6 +74,13 @@ class User(object):
 		return self._key != other.key
 
 class Desk(Module):
+	def __init__(self, settings, logger):
+		super(Desk, self).__init__(settings, logger)
+		self.on_playing_changed = Event()
+		self.orchestrator.on_playing_changed.register(
+				self._on_playing_changed)
+	def _on_playing_changed(self):
+		self.on_playing_changed()
 	def list_media(self):
 		return self.collection.media
 	def request_media(self, media, user):
@@ -148,6 +155,7 @@ class Queue(Module):
 class Orchestrator(Module):
 	def __init__(self, settings, logger):
 		super(Orchestrator, self).__init__(settings, logger)
+		self.on_playing_changed = Event()
 		self.lock = threading.Lock()
 	def get_playing(self):
 		with self.lock:
@@ -177,6 +185,7 @@ class Orchestrator(Module):
 				continue
 			self.history.record(self.playing_media,
 					    self.satisfied_request)
+			self.on_playing_changed()
 			self.player.play(media)
 	
 	def wait_for_media(self):
