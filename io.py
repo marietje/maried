@@ -1,6 +1,20 @@
 import select
 import socket
 
+class CappedReadFile(object):
+	def __init__(self, f, cap):
+		self.f = f
+		self.left = cap
+	def read(self, n):
+		if n <= self.left:
+			self.left -= n
+			return self.f.read(n)
+		if self.left == 0:
+			return ''
+		ret = self.f.read(self.left)
+		self.left = 0
+		return ret
+
 class IntSocketFile(object):
 	""" IntSocketFile(s) ~ s.makefile(), but has a nice
 	    interrupt function """

@@ -40,6 +40,8 @@ class MediaFile(object):
 	def __init__(self, store, key):
 		self.key = _key
 		self.store = store
+	def get_named_file(self):
+		raise NotImplementedError
 	def open(self):
 		raise NotImplementedError
 	def remove(self):
@@ -77,14 +79,14 @@ class Desk(Module):
 	def request_media(self, media, user):
 		self.users.assert_request(user, media)
 		self.queue.request(media, user)
-	def add_media(self, stream, user):
+	def add_media(self, stream, user, customInfo=None):
 		mediaFile = self.mediaStore.create(stream)
 		try:
 			self.users.assert_addition(user, mediaFile)
 		except Denied:
 			mediaFile.remove()
 			raise
-		self.collection.add(mediaFile, user)
+		self.collection.add(mediaFile, user, customInfo)
 	def list_requests(self):
 		return self.queue.requests
 	def cancel_request(self, request, user):
@@ -204,7 +206,7 @@ class Collection(Module):
 		# got_media_event is set when the Collection isn't
 		# empty.
 		self.got_media_event = threading.Event()
-	def add(self, mediaFile, user):
+	def add(self, mediaFile, user, extraInfo=None):
 		raise NotImplementedError
 	@property
 	def media(self):

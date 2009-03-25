@@ -1,8 +1,9 @@
 from __future__ import with_statement
 
 from maried.core import *
-from maried.io import IntSocketFile
+from maried.io import IntSocketFile, CappedReadFile
 
+import os
 import time
 import socket
 import select
@@ -10,9 +11,12 @@ import random
 import select
 import os.path
 import MySQLdb
+import hashlib
 import logging
 import datetime
+import tempfile
 import threading
+import contextlib
 import subprocess
 
 class AlreadyInQueueError(Denied):
@@ -59,6 +63,8 @@ class ClassicMediaFile(MediaFile):
 		self.path = path
 	def open(self):
 		return open(self.path)
+	def get_named_file(self):
+		return self.path
 	def __repr__(self):
 		return "<ClassicMediaFile %s>" % self._key
 
@@ -238,6 +244,32 @@ class ClassicRequestServer(Module):
 			f.write("ERROR::%s" % e)
 			return
 		f.write("REQUEST::SUCCESS")
+	
+	def _handle_request_upload(self, conn, addr, l, f, cmd):
+		bits = cmd.strip().split('::')
+		if len(bits) != 10:
+			f.write("Wrong number of arguments\n")
+			self.l.warn("Wrong number of arguments %s" % repr(cmd))
+			return
+		if (bits[2] != 'ARTIST' or
+		    bits[4] != 'TITLE' or
+		    bits[6] != 'USER' or
+		    bits[8] != 'SIZE'):
+			f.write("Malformed command\n")
+			self.l.warn("Malformed command %s" % repr(cmd))
+			return
+		artist, title, user, size = bits[3], bits[5], \
+					    bits[7], int(bits[9])
+		f.write("SEND::FILE")
+		try:
+			mf = self.desk.add_media(CappedReadFile(f, size), user,
+					{'artist': artist,
+					 'title': title})
+		except e:
+			self.l.warn("Error while desk.add_media: %s" % repr(e))
+			f.write("ERROR::%s" % e)
+			return
+		f.write("UPLOAD::SUCCESS")	
 
 	def _dispatch_request(self, conn, addr, n):
 		try:
@@ -272,6 +304,7 @@ class ClassicRequestServer(Module):
 				'LIST::NOWPLAYING\n': self._handle_nowplaying,
 				'LIST::ALL': self._handle_list_all,
 				'REQUEST::SONG::': self._handle_request_song,
+				'REQUEST::UPLOAD::': self._handle_request_upload,
 				'LOGIN::USER::': self._handle_login_user}
 		
 	def _inner_run(self):
@@ -360,6 +393,24 @@ class ClassicMediaInfo(MediaInfo):
 			'length': 	length}
 
 class ClassicMediaStore(MediaStore):
+	def create(self, stream):
+		f = tempfile.NamedTemporaryFile(delete=False)
+		m = hashlib.sha512()
+		while True:
+			b = stream.read(2048)
+			m.update(b)
+			if len(b) == 0:
+				break
+			f.write(b)
+		f.close()
+		hd = m.hexdigest()
+		path = os.path.join(self.path, hd)
+		if os.path.exists(path):
+			self.l.warn("Duplicate file %s" % hd)
+		else:
+			os.rename(f.name, path)
+		return self.by_key(hd)
+
 	def by_key(self, key):
 		p = os.path.join(self.path, key)
 		if not os.path.exists(p):
@@ -419,6 +470,18 @@ class ClassicCollection(Collection):
 
 	def stop(self):
 		self.got_media_event.set()
+
+	def add(self, mediaFile, user, extraInfo=None):
+		info = self.mediaInfo.get_info_by_path(
+				mediaFile.get_named_file())
+		if not info is None:
+			info.update(extraInfo)
+		self.db.add_media(info['artist'],
+				  info['title'],
+				  info['length'],
+				  mediaFile.key,
+				  user,
+				  int(time.time()))
 
 class ClassicRandom(Random):
 	def __init__(self, settings, logger):
@@ -576,6 +639,28 @@ class ClassicDb(Module):
 				uploadedTimestamp) in c.fetchall():
 			yield (trackId, artist, title, length, fileName,
 			       uploadedBy, uploadedTimestamp)
+		if not cursor is None: cursor.close()
+
+	def add_media(self, artist, title, length, fileName, uploadedBy,
+			uploadedTimestamp, cursor=None):
+		c = self.cursor() if cursor is None else cursor
+		c.execute("""
+			INSERT INTO tracks (
+				artist,
+				title,
+				length,
+				fileName,
+				uploadedBy
+				uploadedTimestamp
+			) VALUES (
+				%s, %s, %s, %s, %s, %s
+			); commit; """,
+			(artist,
+			 title,
+			 length,
+			 filename,
+			 uploadedBy,
+
 		if not cursor is None: cursor.close()
 
 	def history_record(self, byKey, trackId, timeStamp, cursor=None):
