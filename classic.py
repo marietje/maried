@@ -375,7 +375,7 @@ class ClassicPlayer(Module):
 			return
 		self.l.info("Playing %s" % media)
 		with mf.open() as f:
-			pipe = subprocess.Popen(['mpg123', '-'],
+			pipe = subprocess.Popen(['mpg123', '-q', '-'],
 						stdin=f.fileno())
 			pipe.wait()
 	def stop(self):
