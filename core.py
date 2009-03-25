@@ -38,7 +38,7 @@ class Media(object):
 	pass
 class MediaFile(object):
 	def __init__(self, store, key):
-		self.key = _key
+		self._key = key
 		self.store = store
 	def get_named_file(self):
 		raise NotImplementedError
