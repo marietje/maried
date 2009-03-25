@@ -660,7 +660,7 @@ class ClassicDb(Module):
 			 length,
 			 filename,
 			 uploadedBy,
-
+			 uploadedTimestamp))
 		if not cursor is None: cursor.close()
 
 	def history_record(self, byKey, trackId, timeStamp, cursor=None):
