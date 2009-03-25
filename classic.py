@@ -353,7 +353,7 @@ class ClassicScreen(Module):
 	def stop(self):
 		pass
 
-class DummyPlayer(Module):
+class DummyPlayer(Player):
 	def __init__(self, settings, logger):
 		super(DummyPlayer, self).__init__(settings, logger)
 		self._sleep_socket = socket.socketpair()
@@ -364,7 +364,7 @@ class DummyPlayer(Module):
 				time.time() + media.length)
 		select.select([self._sleep_socket[1]], [], [], media.length)
 
-class ClassicPlayer(Module):
+class ClassicPlayer(Player):
 	def play(self, media):
 		self.endTime = datetime.datetime.fromtimestamp(
 				time.time() + media.length)

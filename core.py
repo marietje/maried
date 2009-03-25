@@ -199,6 +199,14 @@ class MediaStore(Module):
 	def by_key(self, key):
 		raise NotImplementedError
 
+class Player(Module):
+	def __init__(self, settings, logger):
+		super(Player, self).__init__(settings, logger)
+	def stop(self):
+		raise NotImplementedError
+	def play(self, media):
+		raise NotImplementedError
+
 class Collection(Module):
 	def __init__(self, settings, logger):
 		super(Collection, self).__init__(settings, logger)
