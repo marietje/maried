@@ -348,10 +348,28 @@ class ClassicRequestServer(Module):
 			conn.interrupt()
 
 class ClassicScreen(Module):
+	def __init__(self, settings, logger):
+		super(ClassicScreen, self).__init__(settings, logger)
+		self.desk.on_playing_changed.register(self._on_playing_changed)
+		self.cond = threading.Condition()
+		self.running = True
+	def _on_playing_changed(self):
+		with self.cond:
+			self.cond.notify()
 	def run(self):
-		pass
+		while self.running:
+			m, r, tmp = self.desk.get_playing()
+			by = "Marietje" if r is None else r.by.fullName
+			with open(self.bannerFile, 'w') as f:
+				f.write("\scroll %s: %s - %s" % (
+					by, m.artist, m.title))
+			with self.cond:
+				self.cond.wait()
 	def stop(self):
-		pass
+		self.running = False
+		with self.cond:
+			self.cond.notify()
+	
 
 class DummyPlayer(Player):
 	def __init__(self, settings, logger):

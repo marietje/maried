@@ -56,6 +56,8 @@ definitions:
   classicScreen:
     implementedBy: maried.classic.ClassicScreen
     inherits: [screen]
+    settings:
+      bannerFile: {type: str}
   classicUsers:
     implementedBy: maried.classic.ClassicUsers
     inherits: [users]
@@ -113,6 +115,7 @@ instances:
   screen:
     module: classicScreen
     desk: desk
+    bannerFile: /tmp/banner
   users:
     module: classicUsers
     collection: collection
