@@ -265,8 +265,8 @@ class ClassicRequestServer(Module):
 			mf = self.desk.add_media(CappedReadFile(f, size), user,
 					{'artist': artist,
 					 'title': title})
-		except e:
-			self.l.warn("Error while desk.add_media: %s" % repr(e))
+		except Exception, e:
+			self.l.exception("Error while desk.add_media")
 			f.write("ERROR::%s" % e)
 			return
 		f.write("UPLOAD::SUCCESS")	
@@ -402,9 +402,10 @@ class ClassicPlayer(Player):
 
 class ClassicMediaInfo(MediaInfo):
 	def get_info_by_path(self, path):
+		self.l.info("Info for %s" % path)
 		p = subprocess.Popen(['mp3info', path, '-p', '%a\\n%t\\n%S'],
 				     stdout=subprocess.PIPE)
-		artist, title, length = p.read().split("\n")
+		artist, title, length = p.stdout.read().split("\n")
 		length = int(length)
 		return {'artist':	artist,
 			'title':	title,
@@ -412,7 +413,8 @@ class ClassicMediaInfo(MediaInfo):
 
 class ClassicMediaStore(MediaStore):
 	def create(self, stream):
-		f = tempfile.NamedTemporaryFile(delete=False)
+		(fd, fn) = tempfile.mkstemp()
+		f = open(fn, 'w')
 		m = hashlib.sha512()
 		while True:
 			b = stream.read(2048)
@@ -426,7 +428,7 @@ class ClassicMediaStore(MediaStore):
 		if os.path.exists(path):
 			self.l.warn("Duplicate file %s" % hd)
 		else:
-			os.rename(f.name, path)
+			os.rename(fn, path)
 		return self.by_key(hd)
 
 	def by_key(self, key):
@@ -490,16 +492,20 @@ class ClassicCollection(Collection):
 		self.got_media_event.set()
 
 	def add(self, mediaFile, user, extraInfo=None):
-		info = self.mediaInfo.get_info_by_path(
-				mediaFile.get_named_file())
+		info = mediaFile.get_info()
 		if not info is None:
 			info.update(extraInfo)
-		self.db.add_media(info['artist'],
-				  info['title'],
-				  info['length'],
-				  mediaFile.key,
-				  user,
-				  int(time.time()))
+		tmp = (info['artist'],
+		       info['title'],
+		       info['length'],
+		       mediaFile.key,
+		       user,
+		       int(time.time()))
+		key = self.db.add_media(*tmp)
+		with self.lock:
+			self._media[key] = ClassicMedia(self, key, *tmp)
+		self.on_keys_changed()
+		
 
 class ClassicRandom(Random):
 	def __init__(self, settings, logger):
@@ -668,7 +674,7 @@ class ClassicDb(Module):
 				title,
 				length,
 				fileName,
-				uploadedBy
+				uploadedBy,
 				uploadedTimestamp
 			) VALUES (
 				%s, %s, %s, %s, %s, %s
@@ -676,10 +682,17 @@ class ClassicDb(Module):
 			(artist,
 			 title,
 			 length,
-			 filename,
+			 fileName,
 			 uploadedBy,
 			 uploadedTimestamp))
 		if not cursor is None: cursor.close()
+		c = self.cursor() if cursor is None else cursor
+		c.execute(""" SELECT trackId
+			      FROM tracks
+			      WHERE fileName=%s """, fileName)
+		ret = c.fetchone()[0]
+		if not cursor is None: cursor.close()
+		return ret
 
 	def history_record(self, byKey, trackId, timeStamp, cursor=None):
 		c = self.cursor() if cursor is None else cursor
