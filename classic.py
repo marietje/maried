@@ -361,7 +361,7 @@ class ClassicScreen(Module):
 			m, r, tmp = self.desk.get_playing()
 			by = "Marietje" if r is None else r.by.realName
 			with open(self.bannerFile, 'w') as f:
-				f.write("\scroll %s: %s - %s" % (
+				f.write("\scroll %s: %s - %s\n" % (
 					by, m.artist, m.title))
 			with self.cond:
 				self.cond.wait()
