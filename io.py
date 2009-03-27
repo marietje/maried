@@ -15,6 +15,35 @@ class CappedReadFile(object):
 		self.left = 0
 		return ret
 
+class BufferedFile(object):
+	""" Wraps around a normal fileobject, buffering IO writes,
+		@f	the file to wrap
+		@n	the buffer size """
+	def __init__(self, f, n=4096):
+		self.f = f
+		self.n = n
+		# Maybe a cStringIO would be faster.  However <n> is still
+		# pretty small in comparison.
+		self.buf = ''
+	
+	def read(self, n=None):
+		if n is None:
+			return self.f.read()
+		return self.f.read(n)
+	
+	def write(self, s):
+		if len(s) + len(self.buf) >= self.n:
+			self.f.write(self.buf + s)
+			self.buf = ''
+		self.buf += s
+	
+	def flush(self):
+		self.f.write(self.buf)
+		self.buf = ''
+	
+	def close(self):
+		self.f.close()
+
 class IntSocketFile(object):
 	""" IntSocketFile(s) ~ s.makefile(), but has a nice
 	    interrupt function """
