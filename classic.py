@@ -1,7 +1,7 @@
 from __future__ import with_statement
 
 from maried.core import *
-from maried.io import IntSocketFile, CappedReadFile
+from maried.io import *
 
 import os
 import time
@@ -174,12 +174,14 @@ class ClassicRequestServer(Module):
 			time.mktime(datetime.datetime.now().timetuple()))
 		f.write("TOTAL::%s::TIMELEFT::%s\n" % (len(queue),
 						       int(timeLeft)))
+		wf = BufferedFile(f)
 		for req in queue:
 			media = req.media
-			f.write("SONG::%s::%s::%s::%s\n" % (media.artist,
-							    media.title,
-							    media.length,
-							    req.by.key))
+			wf.write("SONG::%s::%s::%s::%s\n" % (media.artist,
+							     media.title,
+							     media.length,
+							     req.by.key))
+		wf.flush()
 
 	def _handle_nowplaying(self, conn, addr, l, f, cmd):
 		media, request, endTime = self.desk.get_playing()
@@ -194,12 +196,14 @@ class ClassicRequestServer(Module):
 	def _handle_list_all(self, conn, addr, l, f, cmd):
 		media_l = list(self.desk.list_media())
 		f.write("TOTAL::%s\n" % len(media_l))
+		wf = BufferedFile(f)
 		for media in media_l:
-			f.write("SONG::%s::%s::%s::%s\n" % (
+			wf.write("SONG::%s::%s::%s::%s\n" % (
 					media.key,
 					media.artist,
 					media.title,
 					0))
+		wf.flush()
 
 	def _handle_login_user(self, conn, addr, l, f, cmd):
 		key = cmd.strip().split('::', 2)[-1]
