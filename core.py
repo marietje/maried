@@ -215,6 +215,7 @@ class MediaStore(Module):
 class Player(Module):
 	def __init__(self, settings, logger):
 		super(Player, self).__init__(settings, logger)
+		self.endTime = None
 	def stop(self):
 		raise NotImplementedError
 	def play(self, media):
