@@ -68,21 +68,35 @@ class ClassicMediaFile(MediaFile):
 	def __repr__(self):
 		return "<ClassicMediaFile %s>" % self._key
 
-class ClassicRequest(Request):
-	def __init__(self, queue, key, mediaKey, byKey):
-		self.queue = queue
-		self._key = key
+class ClassicBaseRequest(object):
+	def __init__(self, mediaKey, byKey):
 		self.mediaKey = mediaKey
 		self.byKey = byKey
-	
 	@property
 	def media(self):
 		return self.queue.collection.by_key(self.mediaKey)
-
 	@property
 	def by(self):
+		if self.byKey is None:
+			return None
 		return self.queue.collection._user_by_key(self.byKey)
 
+class ClassicPastRequest(PastRequest, ClassicBaseRequest):
+	def __init__(self, history, mediaKey, byKey, at):
+		ClassicBaseRequest.__init__(self, mediaKey, byKey)
+		self.history = history
+		self.at = at
+	def __repr__(self):
+		return "<ClassicPastRequest %s - %s @ %s>" % (
+				self.byKey,
+				repr(self.media),
+				self.at)
+
+class ClassicRequest(Request, ClassicBaseRequest):
+	def __init__(self, queue, key, mediaKey, byKey):
+		ClassicBaseRequest.__init__(self, mediaKey, byKey)
+		self.queue = queue
+		self.key = key
 	def __repr__(self):
 		return "<ClassicRequest %s - %s>" % (self.byKey,
 						     repr(self.media))
@@ -156,12 +170,21 @@ class ClassicQueue(Queue):
 		raise NotImplementedError
 
 class ClassicHistory(Module):
-	def record(self, media, request):
+	def record(self, media, request, at):
 		self.l.info(repr(media if request is None else request))
-		timeStamp = int(time.time())
+		timeStamp = time.mktime(at.timetuple())
 		byKey = "Marietje" if request is None else request.by.key
 		trackId = media.key
 		self.db.history_record(byKey, trackId, timeStamp)
+	
+	def past_requests(self):
+		for timeStamp, userName, trackId \
+				in self.history.list_requests():
+			at = datetime.datetime.fromtimestamp(timeStamp)
+			yield ClassicPastRequest(self,
+					         trackId,
+						 userName,
+						 at)
 
 class ClassicDesk(Desk):
 	pass
@@ -716,4 +739,21 @@ class ClassicDb(Module):
 				%s,
 				%s); commit; """,
 			(byKey, trackId, timeStamp))
+		if not cursor is None: cursor.close()
+	
+	def history_list(self, cursor=None):
+		c = self.cursor() if cursor is None else cursor
+		c.execute("""
+			SELECT username, trackid, timestamp
+			FROM log;
+			""")
+		while True:
+			rrs = c.fetchmany(128)
+			if not rrs:
+				break
+			for rr in rrs:
+				username, trackId, timeStamp = rr
+				if username == 'Marietje':
+					username = None
+				yield timeStamp, username, trackId
 		if not cursor is None: cursor.close()

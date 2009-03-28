@@ -1,4 +1,5 @@
 from __future__ import with_statement
+import datetime
 import tempfile
 import threading
 
@@ -57,11 +58,19 @@ class MediaFile(object):
 	@property
 	def key(self):
 		return self._key
-class Request(object):
-	def __init__(self, queue, media, by):
-		self.queue = queue
-		self.media = media
+class BaseRequest(object):
+	def __init__(self, media, by):
 		self.by = by
+		self.media = media
+class PastRequest(BaseRequest):
+	def __init__(self, history, media, by, at):
+		super(PastRequest, self).__init__(media, by)
+		self.history = history
+		self.at = at
+class Request(BaseRequest):
+	def __init__(self, queue, media, by):
+		super(Request, self).__init__(media, by)
+		self.queue = queue
 	def move(self, amount):
 		self.queue.move(self, amount)
 	def cancel(self):
@@ -188,7 +197,8 @@ class Orchestrator(Module):
 				self.wait_for_media()
 				continue
 			self.history.record(self.playing_media,
-					    self.satisfied_request)
+					    self.satisfied_request,
+					    datetime.datetime.now())
 			self.on_playing_changed()
 			self.player.play(media)
 	
