@@ -1,11 +1,15 @@
+includes:
+  - threadPool.mirte.yaml
 definitions:
   shellServer:
     implementedBy: maried.shell.ShellServer
     settings:
       socketPath: {type: str}
+      threadPool: {type: threadPool}
     run: True
     revealManager: True
 instances:
   shellServer:
     module: shellServer
     socketPath: maried.socket
+    threadPool: threadPool

@@ -104,9 +104,8 @@ class ShellServer(Module):
 				continue
 			con, addr = s.accept()
 			self.n_conn += 1
-			t = threading.Thread(target=self._handle_request,
-					     args=(con, addr, self.n_conn))
-			t.start()
+			self.threadPool.execute(self._handle_request,
+						con, addr, self.n_conn)
 	def _handle_request(self, con, addr, n_conn):
 		l = logging.getLogger("%s.%s" % (self.l.name, n_conn))
 		l.info('Accepted connection from %s' % addr)
