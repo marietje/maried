@@ -358,4 +358,6 @@ def main():
 	m.run()
 
 if __name__ == '__main__':
+	if os.path.abspath('.') in sys.path:
+		sys.path.remove(os.path.abspath('.'))
 	main()
