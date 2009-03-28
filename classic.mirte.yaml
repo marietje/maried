@@ -1,4 +1,5 @@
 includes:
+  - threadPool.mirte.yaml
   - core.mirte.yaml
 definitions:
   classicCollection:
@@ -53,6 +54,7 @@ definitions:
     settings:
       host: { type: str }
       port: { type: int }
+      threadPool: { type: threadPool }
   classicScreen:
     implementedBy: maried.classic.ClassicScreen
     inherits: [screen]
@@ -112,6 +114,7 @@ instances:
     desk: desk
     host: localhost
     port: 1337
+    threadPool: threadPool
   screen:
     module: classicScreen
     desk: desk

@@ -1,5 +1,6 @@
 from __future__ import with_statement
 
+from maried.mirte import Module, Event
 from maried.core import *
 from maried.io import *
 
@@ -360,9 +361,8 @@ class ClassicRequestServer(Module):
 			return False
 		conn, addr = self.socket.accept()
 		self.n_conn += 1
-		t = threading.Thread(target=self._dispatch_request,
-				     args=(conn, addr, self.n_conn))
-		t.start()
+		self.threadPool.execute(self._dispatch_request,
+					conn, addr, self.n_conn)
 		return False
 
 	def run(self):
@@ -624,6 +624,7 @@ class ClassicDb(Module):
 	def conn(self):
 		if not hasattr(self.local, 'conn'):
 			self.local.conn = self.create_conn()
+			self.l.debug("Created new DB connection")
 		return self.local.conn
 
 	@property
