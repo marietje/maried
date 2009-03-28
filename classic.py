@@ -577,12 +577,9 @@ class ClassicOrchestrator(Orchestrator):
 	pass
 
 class ClassicDb(Module):
-	class ConnectionLocal(threading.local):
-		def __del__(self):
-			print "woo!"
 	def __init__(self, settings, logger):
 		super(ClassicDb, self).__init__(settings, logger)
-		self.local = ClassicDb.ConnectionLocal()
+		self.local = threading.local()
 		self.on_changed = Event()
 		self.creds_ok = False
 		self.connections = list()
