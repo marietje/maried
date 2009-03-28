@@ -10,6 +10,33 @@ import yaml
 import sys
 import os
 
+class Module(object):
+	def __init__(self, settings, logger):
+		for k, v in settings.items():
+			setattr(self, k, v)
+		self.l = logger
+		self.on_settings_changed = dict()
+	
+	def change_setting(self, key, value):
+		setattr(self, key, value)
+		if not key in self.on_settings_changed:
+			return
+		self.on_settings_changed[key]()
+
+	def register_on_setting_changed(self, key, handler):
+		if not key in self.on_settings_changed:
+			self.on_settings_changed[key] = Event()
+		self.on_settings_changed[key].register(handler)
+
+class Event(object):
+	def __init__(self):
+		self.handlers = []
+	def register(self, handler):
+		self.handlers.append(handler)
+	def __call__(self, *args, **kwargs):
+		for handler in self.handlers:
+			handler(*args, **kwargs)
+
 def _get_by_path(bits, _globals):
 	c = None
 	for i, bit in enumerate(bits):
@@ -288,17 +315,27 @@ def walk_mirteFiles(path):
 	    the mirte-file at <cpath> """
 	stack = [path]
 	loadStack = []
+	had = dict()
 	while stack:
 		path = stack.pop()
-		with open(path) as f:
-			d = yaml.load(f)
+		if path in had:
+			d = had[path]
+		else:
+			with open(path) as f:
+				d = yaml.load(f)
+			had[path] = d
 		loadStack.append((path, d))
 		if not 'includes' in d:
 			continue
 		for include in d['includes']:
-			stack.append(os.path.join(os.path.dirname(path),
-						  include))
+			p = os.path.join(os.path.dirname(path),
+						  include)
+			stack.append(p)
+	had = set()
 	for path, d in reversed(loadStack):
+		if path in had:
+			continue
+		had.add(path)
 		yield path, d
 
 def parse_cmdLine(args):
