@@ -169,15 +169,27 @@ class ClassicQueue(Queue):
 	def move(self, request, amount):
 		raise NotImplementedError
 
-class ClassicHistory(Module):
+class ClassicHistory(History):
+	def __init__(self, settings, logger):
+		super(ClassicHistory, self).__init__(settings, logger)
+		self.db.on_changed.register(self._on_db_changed)
+	
+	def _on_db_changed(self):
+		self.on_pretty_changed()
+
 	def record(self, media, request, at):
 		self.l.info(repr(media if request is None else request))
 		timeStamp = time.mktime(at.timetuple())
 		byKey = "Marietje" if request is None else request.by.key
 		trackId = media.key
 		self.db.history_record(byKey, trackId, timeStamp)
+		self.on_record(ClassicPastRequest(
+			self,
+			media.key,
+			None if request is None else request.by.key,
+			at))
 	
-	def past_requests(self):
+	def list_past_requests(self):
 		for timeStamp, userName, trackId \
 				in self.history.list_requests():
 			at = datetime.datetime.fromtimestamp(timeStamp)

@@ -122,6 +122,18 @@ class Desk(Module):
 	def media_by_key(self, key):
 		return self.collection.by_key(key)
 
+class History(Module):
+	def __init__(self, settings, logger):
+		super(History, self).__init__(settings, logger)
+		# when a record is added runtime
+		self.on_record = Event()
+		# when the whole history is changed (db change, et al)
+		self.on_pretty_changed = Event()
+	def record(self, media, request, at):
+		raise NotImplementedError
+	def list_past_requests(self):
+		raise NotImplementedError
+
 class Users(Module):
 	def assert_request(self, user, media):
 		raise NotImplementedError
