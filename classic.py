@@ -13,6 +13,7 @@ import os.path
 import MySQLdb
 import hashlib
 import logging
+import weakref
 import datetime
 import tempfile
 import threading
@@ -576,12 +577,15 @@ class ClassicOrchestrator(Orchestrator):
 	pass
 
 class ClassicDb(Module):
+	class ConnectionLocal(threading.local):
+		def __del__(self):
+			print "woo!"
 	def __init__(self, settings, logger):
 		super(ClassicDb, self).__init__(settings, logger)
-		self.local = threading.local()
+		self.local = ClassicDb.ConnectionLocal()
 		self.on_changed = Event()
-		self.connections = list()
 		self.creds_ok = False
+		self.connections = list()
 		for key in ('username', 'host', 'password', 'database'):
 			if not key in settings:
 				setattr(self, key, None)
@@ -615,14 +619,13 @@ class ClassicDb(Module):
 		if not self.creds_ok:
 			raise ValueError, "Credentials aren't ok"
 		conn = MySQLdb.connect(**self.credentials)
-		self.connections.append(conn)
+		self.connections.append(weakref.ref(conn,
+			lambda x: self.connections.remove(x)))
 		return conn
 
 	@property
 	def conn(self):
-		try:
-			self.local.conn
-		except AttributeError:
+		if not hasattr(self.local, 'conn'):
 			self.local.conn = self.create_conn()
 		return self.local.conn
 
