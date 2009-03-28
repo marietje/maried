@@ -42,6 +42,7 @@ definitions:
     implementedBy: maried.core.Queue
   random:
     implementedBy: maried.core.Random
+    run: true
     settings:
       collection: {type: collection}
       history: {type: history}

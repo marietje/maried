@@ -567,6 +567,11 @@ class ClassicRandom(Random):
 		key = self.keys[random.randint(0, len(self.keys) - 1)]
 		return self.collection.by_key(key)
 
+	def _handle_history_record(self, pr):
+		pass
+	def _handle_history_pretty_changed(self):
+		pass
+
 class ClassicOrchestrator(Orchestrator):
 	pass
 

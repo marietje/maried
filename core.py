@@ -221,7 +221,54 @@ class Orchestrator(Module):
 		self.l.info("Woke!")
 
 class Random(Module):
+	def __init__(self, settings, logger):
+		super(Random, self).__init__(settings, logger)
+		self.cond = threading.Condition()
+		self.running = True
+		# used to push new PastRequest s to the worker thread
+		# None is used in the case of "history.on_pretty_changed"
+		self.recordStack = list()
+		self.readyEvent = threading.Event()
+		self.history.on_pretty_changed.register(
+				self._on_history_pretty_changed)
+		self.history.on_record.register(
+				self._on_history_record)
+
+	def _on_history_pretty_changed(self):
+		with self.cond:
+			self.recordStack = [None]
+			self.cond.notify()
+	def _on_history_record(self, pr):
+		with self.cond:
+			self.recordStack.append(pr)
+			self.cond.notify()
+
 	def pick(self):
+		raise NotImplementedError
+
+	def run(self):
+		while True:
+			with self.cond:
+				self.cond.wait()
+			if not self.running:
+				break
+			if len(self.recordStack) == 0:
+				continue
+			for pr in reversed(self.recordStack):
+				if pr is None:
+					self._handle_history_pretty_changed()
+				else:
+					self._handle_history_record(pr)
+			self.readyEvent.set()
+
+	def stop(self):
+		self.running = False
+		with self.cond:
+			self.cond.notify()
+	
+	def _handle_history_record(self, pr):
+		raise NotImplementedError
+	def _handle_history_pretty_changed(self):
 		raise NotImplementedError
 
 class MediaInfo(Module):
