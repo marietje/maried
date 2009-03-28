@@ -441,6 +441,10 @@ class ClassicMediaStore(MediaStore):
 			raise KeyError, key
 		return ClassicMediaFile(self, p, key)
 
+	def remove(self, mediaFile):
+		self.l.info("Removing %s" % mediaFile)
+		os.unlink(mediaFile.path)
+
 class ClassicCollection(Collection):
 	def __init__(self, settings, logger):
 		super(ClassicCollection, self).__init__(settings, logger)
