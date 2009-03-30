@@ -616,6 +616,7 @@ class ClassicDb(Module):
 		if not self.creds_ok:
 			raise ValueError, "Credentials aren't ok"
 		conn = MySQLdb.connect(**self.credentials)
+		conn.autocommit(True)
 		self.connections.append(weakref.ref(conn,
 			lambda x: self.connections.remove(x)))
 		return conn
@@ -660,7 +661,7 @@ class ClassicDb(Module):
 		c.execute("""
 			UPDATE queue
 			SET played=1
-			WHERE requestid=%s; commit; """, requestId)
+			WHERE requestid=%s; """, requestId)
 		ret = (requestId, trackId, byKey)
 		if not cursor is None: cursor.close()
 		return ret
@@ -688,7 +689,7 @@ class ClassicDb(Module):
 			VALUES (
 				%s,
 				%s,
-				%s); commit; """,
+				%s); """,
 			(media, user, 0))
 		if not cursor is None: cursor.close()
 
@@ -727,7 +728,7 @@ class ClassicDb(Module):
 				uploadedTimestamp
 			) VALUES (
 				%s, %s, %s, %s, %s, %s
-			); commit; """,
+			); """,
 			(artist,
 			 title,
 			 length,
@@ -755,7 +756,7 @@ class ClassicDb(Module):
 				'request',
 				%s,
 				%s,
-				%s); commit; """,
+				%s); """,
 			(byKey, trackId, timeStamp))
 		if not cursor is None: cursor.close()
 	
