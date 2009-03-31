@@ -35,7 +35,8 @@ class BufferedFile(object):
 		if len(s) + len(self.buf) >= self.n:
 			self.f.write(self.buf + s)
 			self.buf = ''
-		self.buf += s
+		else:
+			self.buf += s
 	
 	def flush(self):
 		self.f.write(self.buf)
