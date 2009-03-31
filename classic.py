@@ -285,7 +285,10 @@ class ClassicRequestServer(Module):
 			f.write("ERROR::%s" % e)
 			return
 		f.write("REQUEST::SUCCESS")
-	
+
+	def _handle_list_pls(self, conn, addr, l, f, cmd):
+		f.write("TOTAL::0\n")
+
 	def _handle_request_upload(self, conn, addr, l, f, cmd):
 		bits = cmd.strip().split('::')
 		if len(bits) != 10:
@@ -342,8 +345,9 @@ class ClassicRequestServer(Module):
 		self._sleep_socket_pair = socket.socketpair()
 		self.n_conn = 0
 		self.cmd_map = {'LIST::QUEUE\n': self._handle_list_queue,
-				'LIST::NOWPLAYING\n': self._handle_nowplaying,
+				'LIST::NOWPLAYING': self._handle_nowplaying,
 				'LIST::ALL': self._handle_list_all,
+				'LIST::PLAYLISTS::USER::': self._handle_list_pls,
 				'REQUEST::SONG::': self._handle_request_song,
 				'REQUEST::UPLOAD::': self._handle_request_upload,
 				'LOGIN::USER::': self._handle_login_user}
