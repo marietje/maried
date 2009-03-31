@@ -123,6 +123,7 @@ class Manager(object):
 				   'int': int}
 		self.insts = dict()
 		self._sleep_socketpair = socket.socketpair()
+		self.add_module_definition('module', ModuleDefinition())
 	
 	def add_module_definition(self, name, definition):
 		if name in self.modules:
@@ -274,6 +275,8 @@ def module_definition_from_mirteFile_dict(man, d):
 		m.run = m.run or man.modules[p].run
 		m.revealManager = (m.revealManager or
 				man.modules[p].revealManager)
+	if len(m.inherits) == 0:
+		m.inherits = set(['module'])
 	for k, v in d['settings'].iteritems():
 		if v['type'] in man.modules:
 			m.deps[k] = v['type']
