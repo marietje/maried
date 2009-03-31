@@ -214,10 +214,12 @@ class ClassicRequestServer(Module):
 		wf = BufferedFile(f)
 		for req in queue:
 			media = req.media
+			byKey = ('marietje' if req.by is None
+					    else req.by.key)
 			wf.write("SONG::%s::%s::%s::%s\n" % (media.artist,
 							     media.title,
 							     media.length,
-							     req.by.key))
+							     byKey))
 		wf.flush()
 
 	def _handle_nowplaying(self, conn, addr, l, f, cmd):
@@ -560,11 +562,12 @@ class ClassicRandom(Random):
 		super(ClassicRandom, self).__init__(settings, logger)
 		self.collection.on_keys_changed.register(
 				self.on_collection_keys_changed)
-		self.keys = list()
 		self.on_collection_keys_changed()
 	
 	def on_collection_keys_changed(self):
 		self.keys = self.collection.media_keys
+		if len(self.keys) > 0:
+			self.on_ready()
 
 	def pick(self):
 		if len(self.keys) == 0:
@@ -576,6 +579,9 @@ class ClassicRandom(Random):
 		pass
 	def _handle_history_pretty_changed(self):
 		pass
+	@property
+	def ready(self):
+		return len(self.keys) > 0
 
 class ClassicOrchestrator(Orchestrator):
 	pass

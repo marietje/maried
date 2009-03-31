@@ -4,8 +4,6 @@ definitions:
       mediaStore: {type: mediaStore}
   desk:
     commutations:
-    - - [orchestrator, queue]
-      - [queue]
     - - [collection, mediaStore]
       - [mediaStore]
     - - [orchestrator, random, collection]
@@ -27,7 +25,7 @@ definitions:
       mediaInfo: {type: mediaInfo}
   orchestrator:
     commutations:
-    - - [random, history]
+    - - [randomQueue, random, history]
       - [history]
     implementedBy: maried.core.Orchestrator
     run: true
@@ -35,11 +33,23 @@ definitions:
       history: {type: history}
       player: {type: player}
       queue: {type: queue}
-      random: {type: random}
+      randomQueue: {type: randomQueue}
   player:
     implementedBy: maried.core.Player
   queue:
     implementedBy: maried.core.Queue
+  amalgamatedQueue:
+    inherits: [ queue ]
+    implementedBy: maried.core.AmalgamatedQueue
+    settings:
+      first: {type: queue}
+      second: {type: queue}
+  randomQueue:
+    inherits: [ queue ]
+    implementedBy: maried.core.RandomQueue
+    settings:
+      length: {type: int}
+      random: {type: random}
   random:
     implementedBy: maried.core.Random
     run: true

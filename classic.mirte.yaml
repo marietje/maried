@@ -83,7 +83,7 @@ instances:
     collection: collection
     mediaStore: mediaStore
     orchestrator: orchestrator
-    queue: queue
+    queue: amalgamatedQueue
     users: users
   history:
     module: classicHistory
@@ -98,9 +98,17 @@ instances:
     history: history
     player: player
     queue: queue
+    randomQueue: randomQueue
+  randomQueue:
+    module: randomQueue
     random: random
+    length: 5
   player:
     module: classicPlayer
+  amalgamatedQueue:
+    module: amalgamatedQueue
+    first: queue
+    second: randomQueue
   queue:
     module: classicQueue
     db: classicDb

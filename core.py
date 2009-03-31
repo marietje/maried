@@ -50,6 +50,9 @@ class Request(BaseRequest):
 		self.queue.move(self, amount)
 	def cancel(self):
 		self.queue.cancel(self)
+class OrphanRequest(Request):
+	def __init__(self, queue, media):
+		super(OrphanRequest, self).__init__(queue, media, None)
 class User(object):
 	def __init__(self, key, realName):
 		self.realName = realName
@@ -123,6 +126,68 @@ class Users(Module):
 	def user_by_key(self, key):
 		return NotImplementedError
 
+class RandomQueue(Module):
+	def __init__(self, settings, logger):
+		super(RandomQueue, self).__init__(settings, logger)
+		self.list = list()
+		self.register_on_setting_changed('length', self.osc_length)
+		self.osc_length()
+		self.random.on_ready.register(self._random_on_ready)
+	def _random_on_ready(self):
+		self._fill()
+	@property
+	def requests(self):
+		return reversed(self.list)
+	def shift(self):
+		if len(self.list) == 0:
+			raise EmptyQueueException
+		ret = self.list.pop()
+		self._grow()
+		return ret
+	def _grow(self):
+		if self.random.ready:
+			self.list.append(OrphanRequest(
+				self, self.random.pick()))
+	def request(self, media, user):
+		assert False # shouldn't do that
+	def cancel(self, request):
+		self.list.remove(request)
+		self.list._grow()
+	def move(self, request, amount):
+		assert False # shouldn't do that
+	def osc_length(self):
+		self._fill()
+	def _fill(self):
+		if not self.random.ready:
+			return
+		if len(self.list) < self.length:
+			for i in xrange(self.length - len(self.list)):
+				self._grow()
+		else:
+			self.list = self.list[:self.length]
+
+class AmalgamatedQueue(Module):
+	def __init__(self, settings, logger):
+		super(AmalgamatedQueue, self).__init__(settings, logger)
+	def request(self, media, user):
+		self.first.request(media, user)
+	@property
+	def requests(self):
+		return (tuple(self.first.requests) +
+			tuple(self.second.requests))
+	def shift(self):
+		assert False # shouldn't do that
+	def cancel(self, request):
+		if request in self.first.requests:
+			self.first.cancel(request)
+		else:
+			self.second.cancel(request)
+	def move(self, request, amount):
+		if request in self.first.requests:
+			self.first.move(request, amount)
+		else:
+			self.second.move(request, amount)
+
 class Queue(Module):
 	def __init__(self, settings, logger):
 		super(Queue, self).__init__(settings, logger)
@@ -177,12 +242,14 @@ class Orchestrator(Module):
 					media = req.media
 					assert not media is None
 				except EmptyQueueException:
-					media = self.random.pick()
+					try:
+						media = self.randomQueue.shift(
+								).media
+					except EmptyQueueException:
+						self.wait_for_media()
+						continue
 				self.playing_media = media
 				self.satisfied_request = req
-			if media is None:
-				self.wait_for_media()
-				continue
 			self.history.record(self.playing_media,
 					    self.satisfied_request,
 					    datetime.datetime.now())
@@ -190,7 +257,7 @@ class Orchestrator(Module):
 			self.player.play(media)
 	
 	def wait_for_media(self):
-		self.l.info("Random couldn't return media -- collection "+
+		self.l.info("Randomqueue couldn't return media -- collection "+
 			    "is assumed to be empty -- waiting for media.")
 		self.random.collection.got_media_event.wait()
 		self.l.info("Woke!")
@@ -203,7 +270,7 @@ class Random(Module):
 		# used to push new PastRequest s to the worker thread
 		# None is used in the case of "history.on_pretty_changed"
 		self.recordStack = list()
-		self.readyEvent = threading.Event()
+		self.on_ready = Event()
 		self.history.on_pretty_changed.register(
 				self._on_history_pretty_changed)
 		self.history.on_record.register(
@@ -234,7 +301,6 @@ class Random(Module):
 					self._handle_history_pretty_changed()
 				else:
 					self._handle_history_record(pr)
-			self.readyEvent.set()
 
 	def stop(self):
 		self.running = False
