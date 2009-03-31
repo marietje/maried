@@ -112,7 +112,7 @@ instances:
   requestServer:
     module: classicRequestServer
     desk: desk
-    host: localhost
+    host: 0.0.0.0
     port: 1337
     threadPool: threadPool
   screen:
