@@ -146,7 +146,7 @@ class RandomQueue(Module):
 		return ret
 	def _grow(self):
 		if self.random.ready:
-			self.list.append(OrphanRequest(
+			self.list.insert(0, OrphanRequest(
 				self, self.random.pick()))
 	def request(self, media, user):
 		assert False # shouldn't do that
