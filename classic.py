@@ -376,6 +376,7 @@ class ClassicRequestServer(Module):
 		try:
 			s = self.socket = socket.socket(socket.AF_INET,
 							socket.SOCK_STREAM)
+			s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
 			s.bind((self.host, self.port))
 			s.listen(3)
 			self.l.info("Listening on %s:%s" % (self.host, self.port))
