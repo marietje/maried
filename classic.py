@@ -474,6 +474,7 @@ class ClassicMediaStore(MediaStore):
 	def _do_refresh_keys(self):
 		with self.keysLock:
 			self._keys = os.listdir(self.path)
+		self.l.info("Got %s files" $ len(self._keys))
 
 	def create(self, stream):
 		(fd, fn) = tempfile.mkstemp()
