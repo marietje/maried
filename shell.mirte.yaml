@@ -6,10 +6,11 @@ definitions:
     settings:
       socketPath: {type: str}
       threadPool: {type: threadPool}
+      manager: {type: manager}
     run: True
-    revealManager: True
 instances:
   shellServer:
     module: shellServer
     socketPath: maried.socket
     threadPool: threadPool
+    manager: manager

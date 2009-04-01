@@ -97,8 +97,12 @@ def sort_by_successors(l, succsOf):
 		raise ValueError, "Cycle detected"
 
 class InstanceInfo(object):
-	def __init__(self):
-		self.deps = dict()
+	def __init__(self, name, module, obj, settings, deps):
+		self.deps = deps
+		self.settings = settings
+		self.name = name
+		self.object = obj
+		self.module = module
 
 class ModuleDefinition(object):
 	def __init__(self):
@@ -106,14 +110,13 @@ class ModuleDefinition(object):
 		self.vsettings = dict()
 		self.implementedBy = None
 		self.run = False
-		self.revealManager = False
 		self.inherits = list()
 
-class Manager(object):
+class Manager(Module):
 	def __init__(self, logger=None):
 		if logger is None:
 			logger = logging.getLogger(object.__repr__(self))
-		self.l = logger
+		super(Manager, self).__init__({}, logger)
 		self.running = False
 		self.modules = dict()
 		self.to_stop = list() # objects to stop
@@ -124,6 +127,9 @@ class Manager(object):
 		self.insts = dict()
 		self._sleep_socketpair = socket.socketpair()
 		self.add_module_definition('module', ModuleDefinition())
+		self.add_module_definition('manager', ModuleDefinition())
+		self.insts['manager'] = InstanceInfo('manager', 'manager',
+						     self, {}, {})
 	
 	def add_module_definition(self, name, definition):
 		if name in self.modules:
@@ -141,16 +147,14 @@ class Manager(object):
 			raise ValueError, \
 				"There's no module %s" % moduleName
 		md = self.modules[moduleName]
-		ii = self.insts[name] = InstanceInfo()
-		if md.revealManager:
-			settings['manager'] = self
+		deps = dict()
 		for k, v in md.deps.iteritems():
 			if not k in settings:
 				raise ValueError, "Missing setting %s" % k
 			if not settings[k] in self.insts:
 				raise ValueError, "No such instance %s" \
 						% settings[k]
-			ii.deps[k] = settings[k]
+			deps[k] = settings[k]
 			settings[k] = self.insts[settings[k]].object
 		for k, v in md.vsettings.iteritems():
 			if not k in settings:
@@ -158,16 +162,15 @@ class Manager(object):
 						(name, k))
 		cl = get_by_path(md.implementedBy)
 		il = logging.getLogger(name)
-		ii.settings = settings
-		ii.module = moduleName
-		ii.name = name
 		self.l.info('create_instance %-15s %s' % (
 				name, md.implementedBy))
-		ii.object = cl(settings, il)
+		obj = cl(settings, il)
+		self.insts[name] = InstanceInfo(name,moduleName, obj,
+						settings, deps)
 		if md.run:
 			self.to_stop.append(name)
 			self.daemons.append(name)
-		elif hasattr(ii.object, 'stop'):
+		elif hasattr(obj, 'stop'):
 			self.to_stop.append(name)
 	
 	def run(self):
@@ -263,8 +266,6 @@ def module_definition_from_mirteFile_dict(man, d):
 		m.implementedBy = d['implementedBy']
 	if 'run' in d and d['run']:
 		m.run = True
-	if 'revealManager' in d and d['revealManager']:
-		m.revealManager = True
 	m.inherits = set(d['inherits'])
 	for p in d['inherits']:
 		if not p in man.modules:
@@ -273,8 +274,6 @@ def module_definition_from_mirteFile_dict(man, d):
 		m.vsettings.update(man.modules[p].vsettings)
 		m.inherits.update(man.modules[p].inherits)
 		m.run = m.run or man.modules[p].run
-		m.revealManager = (m.revealManager or
-				man.modules[p].revealManager)
 	if len(m.inherits) == 0:
 		m.inherits = set(['module'])
 	for k, v in d['settings'].iteritems():
