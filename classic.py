@@ -459,6 +459,22 @@ class ClassicMediaInfo(MediaInfo):
 			'length': 	length}
 
 class ClassicMediaStore(MediaStore):
+	def __init__(self, settings, logger):
+		super(ClassicMediaStore, self).__init__(settings, logger)
+		self.register_on_setting_changed('path', self.osc_path)
+		self.osc_path()
+		self.keysLock = threading.Lock()
+	
+	def osc_path(self):
+		self._refresh_keys()
+	
+	def _refresh_keys(self):
+		self.threadPool.execute(self._do_refresh_keys)
+	
+	def _do_refresh_keys(self):
+		with self.keysLock:
+			self._keys = os.listdir(self.path)
+
 	def create(self, stream):
 		(fd, fn) = tempfile.mkstemp()
 		f = open(fn, 'w')
@@ -476,17 +492,26 @@ class ClassicMediaStore(MediaStore):
 			self.l.warn("Duplicate file %s" % hd)
 		else:
 			os.rename(fn, path)
+			with self.keysLock:
+				self._keys.append(hd)
 		return self.by_key(hd)
 
 	def by_key(self, key):
+		with self.keysLock:
+			if not key in self._keys:
+				raise KeyError, key
 		p = os.path.join(self.path, key)
-		if not os.path.exists(p):
-			raise KeyError, key
+		assert os.path.exists(p):
 		return ClassicMediaFile(self, p, key)
 
 	def remove(self, mediaFile):
 		self.l.info("Removing %s" % mediaFile)
 		os.unlink(mediaFile.path)
+	
+	@property
+	def keys(self):
+		with self.keysLock:
+			return tuple(self.keys)
 
 class ClassicCollection(Collection):
 	def __init__(self, settings, logger):

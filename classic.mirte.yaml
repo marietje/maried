@@ -30,6 +30,7 @@ definitions:
     inherits: [mediaStore]
     settings:
       path: {type: str}
+      threadPool: {type: threadPool}
   classicOrchestrator:
     implementedBy: maried.classic.ClassicOrchestrator
     inherits: [orchestrator]
@@ -93,6 +94,7 @@ instances:
   mediaStore:
     module: classicMediaStore
     mediaInfo: mediaInfo
+    threadPool: threadPool
   orchestrator:
     module: classicOrchestrator
     history: history

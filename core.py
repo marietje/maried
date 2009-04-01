@@ -321,6 +321,9 @@ class MediaStore(Module):
 		raise NotImplementedError
 	def by_key(self, key):
 		raise NotImplementedError
+	@property
+	def keys(self):
+		raise NotImplementedError
 
 class Player(Module):
 	def __init__(self, settings, logger):
