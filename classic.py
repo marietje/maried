@@ -463,18 +463,22 @@ class ClassicMediaStore(MediaStore):
 		super(ClassicMediaStore, self).__init__(settings, logger)
 		self.register_on_setting_changed('path', self.osc_path)
 		self.osc_path()
-		self.keysLock = threading.Lock()
+		self._keys = None
+		self.keysCond = threading.Condition()
 	
 	def osc_path(self):
 		self._refresh_keys()
 	
 	def _refresh_keys(self):
+		if not hasattr(self, 'path'):
+			return
 		self.threadPool.execute(self._do_refresh_keys)
 	
 	def _do_refresh_keys(self):
-		with self.keysLock:
+		with self.keysCond:
 			self._keys = os.listdir(self.path)
-		self.l.info("Got %s files" $ len(self._keys))
+			self.l.info("Got %s files" % len(self._keys))
+			self.keysCond.notifyAll()
 
 	def create(self, stream):
 		(fd, fn) = tempfile.mkstemp()
@@ -493,16 +497,23 @@ class ClassicMediaStore(MediaStore):
 			self.l.warn("Duplicate file %s" % hd)
 		else:
 			os.rename(fn, path)
-			with self.keysLock:
+			with self.keysCond:
+				if self._keys is None:
+					self.l.debug(
+						"create: waiting on keysCond")
+					self.keysCond.wait()
 				self._keys.append(hd)
 		return self.by_key(hd)
 
 	def by_key(self, key):
-		with self.keysLock:
+		with self.keysCond:
+			if self._keys is None:
+				self.l.debug("by_key: waiting on keysCond")
+				self.keysCond.wait()
 			if not key in self._keys:
 				raise KeyError, key
 		p = os.path.join(self.path, key)
-		assert os.path.exists(p):
+		assert os.path.exists(p)
 		return ClassicMediaFile(self, p, key)
 
 	def remove(self, mediaFile):
@@ -511,8 +522,11 @@ class ClassicMediaStore(MediaStore):
 	
 	@property
 	def keys(self):
-		with self.keysLock:
-			return tuple(self.keys)
+		with self.keysCond:
+			if self._keys is None:
+				self.l.debug("keys: waiting on keysCond")
+				self.keysCond.wait()
+			return tuple(self._keys)
 
 class ClassicCollection(Collection):
 	def __init__(self, settings, logger):
