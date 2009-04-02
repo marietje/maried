@@ -68,10 +68,15 @@ class Desk(Module):
 	def __init__(self, settings, logger):
 		super(Desk, self).__init__(settings, logger)
 		self.on_playing_changed = Event()
+		self.on_media_changed = Event()
 		self.orchestrator.on_playing_changed.register(
 				self._on_playing_changed)
+		self.collection.on_changed.register(
+				self._on_collection_change())
 	def _on_playing_changed(self):
 		self.on_playing_changed()
+	def _on_collection_changed(self):
+		self.on_media_changed()
 	def list_media(self):
 		return self.collection.media
 	def request_media(self, media, user):
@@ -338,6 +343,7 @@ class Collection(Module):
 	def __init__(self, settings, logger):
 		super(Collection, self).__init__(settings, logger)
 		self.on_keys_changed = Event()
+		self.on_changed = Event()
 		# got_media_event is set when the Collection isn't
 		# empty.
 		self.got_media_event = threading.Event()
