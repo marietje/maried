@@ -596,7 +596,17 @@ class ClassicCollection(Collection):
 		with self.lock:
 			self._media[key] = ClassicMedia(self, key, *tmp)
 		self.on_keys_changed()
-		
+	
+	def check(self):
+		mfKeys = frozenset(self.mediaStore.keys)
+		had = set()
+		for media in self._media.itervalues():
+			if not media.mediaFileKey in mfKeys:
+				self.l.info("Missing mediaFile for %s" % media)
+			else:
+				had.add(media.mediaFileKey)
+		for key in mfKeys - had:
+			self.l.info("Missing Media for %s" % key)
 
 class ClassicRandom(Random):
 	def __init__(self, settings, logger):
