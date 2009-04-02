@@ -231,18 +231,38 @@ class ClassicRequestServer(Module):
 				endTimeTS,
 				media.length,
 				timeTS))
+	
+	def _on_collection_changed(self):
+		self.threadPool.execute(self._do_refresh_LAR)
 
-	def _handle_list_all(self, conn, addr, l, f, cmd):
-		media_l = list(self.desk.list_media())
-		f.write("TOTAL::%s\n" % len(media_l))
-		wf = BufferedFile(f)
+	def _do_refresh_LAR(self):
+		self.l.debug("Refreshing LIST::ALL response")
+		so = cStringIO.StringIO()
+		media_l = sorted(self.desk.list_media(),
+				cmp=lambda x,y: (cmp(x.title, y.title) 
+						 if not cmp(x.artist, y.artist)
+						 else cmp(x.artist, y.artist)))
 		for media in media_l:
-			wf.write("SONG::%s::%s::%s::%s\n" % (
+			so.write("SONG::%s::%s::%s::%s\n" % (
 					media.key,
 					media.artist,
 					media.title,
 					0))
-		wf.flush()
+		with self.LAR_cond:
+			self.LAR = so.getvalue()
+			self.LAR_count = len(media_l)
+		self.l.debug(" ... refreshed")
+
+	def _handle_list_all(self, conn, addr, l, f, cmd):
+		with self.LAR_cond:
+			if self.LAR is None:
+				self.l.warn("Waiting for LIST::ALL "+
+						"response cache")
+				self.LAR_cond.wait()
+			LAR_count = self.LAR_count
+			LAR = self.LAR
+		f.write("TOTAL::%s\n" % len(LAR_count))
+		f.write(LAR)
 
 	def _handle_login_user(self, conn, addr, l, f, cmd):
 		key = cmd.strip().split('::', 2)[-1]
@@ -346,6 +366,8 @@ class ClassicRequestServer(Module):
 		self.lock = threading.Lock()
 		self._sleep_socket_pair = socket.socketpair()
 		self.n_conn = 0
+		self.collection.on_changed.register(
+				self._on_collection_changed)
 		self.cmd_map = {'LIST::QUEUE\n': self._handle_list_queue,
 				'LIST::NOWPLAYING': self._handle_nowplaying,
 				'LIST::ALL': self._handle_list_all,
@@ -353,6 +375,9 @@ class ClassicRequestServer(Module):
 				'REQUEST::SONG::': self._handle_request_song,
 				'REQUEST::UPLOAD::': self._handle_request_upload,
 				'LOGIN::USER::': self._handle_login_user}
+		self.LAR_cond = threading.Condition()
+		self.LAR = None
+		self.LAR_count = 0
 		
 	def _inner_run(self):
 		rlist, wlist, xlist = select.select(
