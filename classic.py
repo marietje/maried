@@ -555,6 +555,7 @@ class ClassicCollection(Collection):
 		self.l.info("Cached %s tracks, %s users" % (len(self._media),
 							    len(self.users)))
 		self.on_keys_changed()
+		self.on_changed()
 		with self.lock:
 			if len(self._media) > 0:
 				self.got_media_event.set()
@@ -596,6 +597,7 @@ class ClassicCollection(Collection):
 		with self.lock:
 			self._media[key] = ClassicMedia(self, key, *tmp)
 		self.on_keys_changed()
+		self.on_changed()
 	
 	def check(self):
 		mfKeys = frozenset(self.mediaStore.keys)
