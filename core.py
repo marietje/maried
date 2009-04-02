@@ -72,7 +72,7 @@ class Desk(Module):
 		self.orchestrator.on_playing_changed.register(
 				self._on_playing_changed)
 		self.collection.on_changed.register(
-				self._on_collection_change())
+				self._on_collection_changed)
 	def _on_playing_changed(self):
 		self.on_playing_changed()
 	def _on_collection_changed(self):

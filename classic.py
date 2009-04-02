@@ -17,6 +17,7 @@ import logging
 import weakref
 import datetime
 import tempfile
+import cStringIO
 import threading
 import contextlib
 import subprocess
@@ -232,7 +233,7 @@ class ClassicRequestServer(Module):
 				media.length,
 				timeTS))
 	
-	def _on_collection_changed(self):
+	def _on_media_changed(self):
 		self.threadPool.execute(self._do_refresh_LAR)
 
 	def _do_refresh_LAR(self):
@@ -261,7 +262,7 @@ class ClassicRequestServer(Module):
 				self.LAR_cond.wait()
 			LAR_count = self.LAR_count
 			LAR = self.LAR
-		f.write("TOTAL::%s\n" % len(LAR_count))
+		f.write("TOTAL::%s\n" % LAR_count)
 		f.write(LAR)
 
 	def _handle_login_user(self, conn, addr, l, f, cmd):
@@ -366,8 +367,8 @@ class ClassicRequestServer(Module):
 		self.lock = threading.Lock()
 		self._sleep_socket_pair = socket.socketpair()
 		self.n_conn = 0
-		self.collection.on_changed.register(
-				self._on_collection_changed)
+		self.desk.on_media_changed.register(
+				self._on_media_changed)
 		self.cmd_map = {'LIST::QUEUE\n': self._handle_list_queue,
 				'LIST::NOWPLAYING': self._handle_nowplaying,
 				'LIST::ALL': self._handle_list_all,
