@@ -665,6 +665,26 @@ class ClassicOrchestrator(Orchestrator):
 	pass
 
 class ClassicDb(Module):
+	class CursorWrapper(object):
+		def __init__(self, cdb):
+			self.__dict__['__cursor'] = cdb.conn.cursor()
+			self.__dict__['__cdb'] = cdb
+		def __getattr__(self, k):
+			return getattr(self.__dict__['__cursor'], k)
+		def __setattr__(self, k, v):
+			setattr(self.__dict__['__cursor'], k, v)
+		def __delattr__(self, k):
+			delattr(self.__dict__['__cursor'], k)
+		def execute(self, *args, **kwargs):
+			try:
+				return self.__dict__['__cursor'].execute(*args, **kwargs)
+			except MySQLdb.OperationalError, e:
+				if e.args[0] != 2006:
+					raise e
+			self.__dict__['__cdb']._reconnect()
+			self.__dict__['__cursor'] = self.__dict__['__cdb'].conn.cursor() 
+			return self.__dict__['__cursor'].execute(*args, **kwargs)
+	
 	def __init__(self, settings, logger):
 		super(ClassicDb, self).__init__(settings, logger)
 		self.local = threading.local()
@@ -716,12 +736,16 @@ class ClassicDb(Module):
 			self.l.debug("Created new DB connection")
 		return self.local.conn
 
+	def _reconnect(self):
+		self.local.conn = self.create_conn()
+		self.l.debug("Reconnected DB connection")
+
 	@property
 	def ready(self):
 		return self.creds_ok
 
 	def cursor(self):
-		return self.conn.cursor()
+		return ClassicDb.CursorWrapper(self)
 	
 	def media_keys(self, cursor=None):
 		c = self.cursor() if cursor is None else cursor
