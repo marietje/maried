@@ -522,6 +522,7 @@ class ClassicMediaStore(MediaStore):
 			self.l.warn("Duplicate file %s" % hd)
 		else:
 			os.rename(fn, path)
+			os.chmod(path, 644)
 			with self.keysCond:
 				if self._keys is None:
 					self.l.debug(
