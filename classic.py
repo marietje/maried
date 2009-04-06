@@ -368,7 +368,7 @@ class ClassicRequestServer(Module):
 		self.n_conn = 0
 		self.desk.on_media_changed.register(
 				self._on_media_changed)
-		self.cmd_map = {'LIST::QUEUE\n': self._handle_list_queue,
+		self.cmd_map = {'LIST::QUEUE': self._handle_list_queue,
 				'LIST::NOWPLAYING': self._handle_nowplaying,
 				'LIST::ALL': self._handle_list_all,
 				'LIST::PLAYLISTS::USER::': self._handle_list_pls,
