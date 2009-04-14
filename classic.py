@@ -203,7 +203,7 @@ class ClassicHistory(History):
 			at))
 	
 	def list_past_requests(self):
-		for timeStamp, userName, trackId \
+		for logId, timeStamp, userName, trackId \
 				in self.db.history_list():
 			at = datetime.datetime.fromtimestamp(timeStamp)
 			yield ClassicPastRequest(self,
