@@ -197,6 +197,7 @@ class ClassicHistory(History):
 		self.db.history_record(byKey, trackId, timeStamp)
 		self.on_record(ClassicPastRequest(
 			self,
+			None,
 			media.key,
 			None if request is None else request.by.key,
 			at))
