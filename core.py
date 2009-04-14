@@ -11,7 +11,8 @@ class EmptyQueueException(Exception):
 	pass
 
 class Media(object):
-	pass
+	def save(self):
+		raise NotImplementedError
 class MediaFile(object):
 	def __init__(self, store, key):
 		self._key = key

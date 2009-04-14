@@ -52,6 +52,9 @@ class ClassicMedia(Media):
 	def key(self):
 		return self._key
 
+	def save(self):
+		self.coll._save_media(self)
+
 	def __repr__(self):
 		return "<ClassicMedia %s - %s>" % (self.artist, self.title)
 
@@ -625,6 +628,16 @@ class ClassicCollection(Collection):
 		self.on_keys_changed()
 		self.on_changed()
 	
+	def _save_media(self, media):
+		self.db.update_media(media.key,
+				     media.artist,
+				     media.title,
+				     media.length,
+				     media.mediaFile.key,
+				     media.uploadedByKey,
+				     media.uploadedTimestamp)
+		self.on_changed()
+	
 class ClassicRandom(Random):
 	def __init__(self, settings, logger):
 		super(ClassicRandom, self).__init__(settings, logger)
@@ -846,6 +859,27 @@ class ClassicDb(Module):
 		if not cursor is None: cursor.close()
 		return ret
 	
+	def update_media(self, trackId, artist, title, length, fileName,
+			 uploadedBy, uploadedTimestamp, cursor=None):
+		c = self.cursor() if cursor is None else cursor
+		c.execute("""
+			UPDATE tracks
+			SET artist=%s,
+			    title=%s,
+			    length=%s,
+			    fileName=%s,
+			    uploadedBy=%s,
+			    uploadedTimestamp=%s
+			WHERE trackId=%s; """,
+			(artist,
+			 title,
+			 length,
+			 fileName,
+			 uploadedBy,
+			 uploadedTimestamp,
+			 trackId))
+		if not cursor is None: cursor.close()
+
 	def history_record(self, byKey, trackId, timeStamp, cursor=None):
 		c = self.cursor() if cursor is None else cursor
 		c.execute("""
