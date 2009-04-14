@@ -91,15 +91,18 @@ class ClassicBaseRequest(object):
 		return self.collection._user_by_key(self.byKey)
 
 class ClassicPastRequest(PastRequest, ClassicBaseRequest):
-	def __init__(self, history, mediaKey, byKey, at):
+	def __init__(self, history, key, mediaKey, byKey, at):
 		ClassicBaseRequest.__init__(self, mediaKey, byKey)
 		self.at = at
+		self.key = key
 		self.collection = history.collection
 	def __repr__(self):
 		return "<ClassicPastRequest %s - %s @ %s>" % (
 				self.byKey,
 				repr(self.media),
 				self.at)
+	def remove(self):
+		self.history._remove_request(self)
 
 class ClassicRequest(Request, ClassicBaseRequest):
 	def __init__(self, queue, key, mediaKey, byKey):
@@ -203,9 +206,15 @@ class ClassicHistory(History):
 				in self.db.history_list():
 			at = datetime.datetime.fromtimestamp(timeStamp)
 			yield ClassicPastRequest(self,
+						 logId,
 					         trackId,
 						 userName,
 						 at)
+	
+	def _remove_request(self, req):
+		self.db.history_remove_request(req.key)
+		# As _remove_request is very infrequent and if used, is
+		# used in volume, we won't call self.on_pretty_changed.
 
 class ClassicDesk(Desk):
 	pass
@@ -874,7 +883,7 @@ class ClassicDb(Module):
 		ret = c.fetchone()[0]
 		if not cursor is None: cursor.close()
 		return ret
-	
+
 	def update_media(self, trackId, artist, title, length, fileName,
 			 uploadedBy, uploadedTimestamp, cursor=None):
 		c = self.cursor() if cursor is None else cursor
@@ -896,6 +905,14 @@ class ClassicDb(Module):
 			 trackId))
 		if not cursor is None: cursor.close()
 
+	def history_remove_request(self, logId, cursor=None):
+		c = self.cursor() if cursor is None else cursor
+		c.execute("""
+			DELETE FROM `log`
+			WHERE LogID=%s """,
+			(logId,))
+		if not cursor is None: cursor.close()
+
 	def history_record(self, byKey, trackId, timeStamp, cursor=None):
 		c = self.cursor() if cursor is None else cursor
 		c.execute("""
@@ -915,7 +932,7 @@ class ClassicDb(Module):
 	def history_list(self, cursor=None):
 		c = self.cursor() if cursor is None else cursor
 		c.execute("""
-			SELECT username, trackid, timestamp
+			SELECT LogID, username, trackid, timestamp
 			FROM log;
 			""")
 		while True:
@@ -923,8 +940,8 @@ class ClassicDb(Module):
 			if not rrs:
 				break
 			for rr in rrs:
-				username, trackId, timeStamp = rr
+				logId, username, trackId, timeStamp = rr
 				if username == 'Marietje':
 					username = None
-				yield timeStamp, username, trackId
+				yield logId, timeStamp, username, trackId
 		if not cursor is None: cursor.close()

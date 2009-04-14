@@ -45,6 +45,8 @@ class PastRequest(BaseRequest):
 		super(PastRequest, self).__init__(media, by)
 		self.history = history
 		self.at = at
+	def remove(self):
+		raise NotImplementedError
 class Request(BaseRequest):
 	def __init__(self, queue, media, by):
 		super(Request, self).__init__(media, by)
