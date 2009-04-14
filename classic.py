@@ -77,18 +77,18 @@ class ClassicBaseRequest(object):
 		self.byKey = byKey
 	@property
 	def media(self):
-		return self.queue.collection.by_key(self.mediaKey)
+		return self.collection.by_key(self.mediaKey)
 	@property
 	def by(self):
 		if self.byKey is None:
 			return None
-		return self.queue.collection._user_by_key(self.byKey)
+		return self.collection._user_by_key(self.byKey)
 
 class ClassicPastRequest(PastRequest, ClassicBaseRequest):
 	def __init__(self, history, mediaKey, byKey, at):
 		ClassicBaseRequest.__init__(self, mediaKey, byKey)
-		self.history = history
 		self.at = at
+		self.collection = history.collection
 	def __repr__(self):
 		return "<ClassicPastRequest %s - %s @ %s>" % (
 				self.byKey,
@@ -98,8 +98,8 @@ class ClassicPastRequest(PastRequest, ClassicBaseRequest):
 class ClassicRequest(Request, ClassicBaseRequest):
 	def __init__(self, queue, key, mediaKey, byKey):
 		ClassicBaseRequest.__init__(self, mediaKey, byKey)
-		self.queue = queue
 		self.key = key
+		self.collection = queue.collection
 	def __repr__(self):
 		return "<ClassicRequest %s - %s>" % (self.byKey,
 						     repr(self.media))
@@ -194,7 +194,7 @@ class ClassicHistory(History):
 	
 	def list_past_requests(self):
 		for timeStamp, userName, trackId \
-				in self.history.list_requests():
+				in self.db.history_list():
 			at = datetime.datetime.fromtimestamp(timeStamp)
 			yield ClassicPastRequest(self,
 					         trackId,
@@ -845,7 +845,7 @@ class ClassicDb(Module):
 		ret = c.fetchone()[0]
 		if not cursor is None: cursor.close()
 		return ret
-
+	
 	def history_record(self, byKey, trackId, timeStamp, cursor=None):
 		c = self.cursor() if cursor is None else cursor
 		c.execute("""

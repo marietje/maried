@@ -22,6 +22,7 @@ definitions:
     inherits: [history]
     settings:
       db: {type: classicDb}
+      collection: {type: classicCollection}
   classicMediaInfo:
     implementedBy: maried.classic.ClassicMediaInfo
     inherits: [mediaInfo]
@@ -89,6 +90,7 @@ instances:
   history:
     module: classicHistory
     db: classicDb
+    collection: collection
   mediaInfo:
     module: classicMediaInfo
   mediaStore:
