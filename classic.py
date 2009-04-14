@@ -95,6 +95,7 @@ class ClassicPastRequest(PastRequest, ClassicBaseRequest):
 		ClassicBaseRequest.__init__(self, mediaKey, byKey)
 		self.at = at
 		self.key = key
+		self.history = history
 		self.collection = history.collection
 	def __repr__(self):
 		return "<ClassicPastRequest %s - %s @ %s>" % (
