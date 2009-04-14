@@ -54,6 +54,9 @@ class ClassicMedia(Media):
 
 	def save(self):
 		self.coll._save_media(self)
+	
+	def unlink(self):
+		self.coll._unlink_media(self)
 
 	def __repr__(self):
 		return "<ClassicMedia %s - %s>" % (self.artist, self.title)
@@ -628,6 +631,11 @@ class ClassicCollection(Collection):
 		self.on_keys_changed()
 		self.on_changed()
 	
+	def _unlink_media(self, media):
+		self.db.remove_media(media.key)
+		self.on_keys_changed()
+		self.on_changed()
+
 	def _save_media(self, media):
 		self.db.update_media(media.key,
 				     media.artist,
@@ -828,6 +836,14 @@ class ClassicDb(Module):
 				uploadedTimestamp) in c.fetchall():
 			yield (trackId, artist, title, length, fileName,
 			       uploadedBy, uploadedTimestamp)
+		if not cursor is None: cursor.close()
+	
+	def remove_media(self, trackId, cursor=None):
+		c = self.cursor() if cursor is None else cursor
+		c.execute("""
+			DELETE FROM tracks
+			WHERE trackId=%s """,
+			(trackId,))
 		if not cursor is None: cursor.close()
 
 	def add_media(self, artist, title, length, fileName, uploadedBy,

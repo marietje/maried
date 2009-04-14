@@ -11,6 +11,8 @@ class EmptyQueueException(Exception):
 	pass
 
 class Media(object):
+	def unlink(self):
+		raise NotImplementedError
 	def save(self):
 		raise NotImplementedError
 class MediaFile(object):
