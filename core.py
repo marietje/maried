@@ -260,12 +260,13 @@ class Orchestrator(Module):
 						continue
 				self.playing_media = media
 				self.satisfied_request = req
-			self.history.record(self.playing_media,
-					    self.satisfied_request,
-					    datetime.datetime.now())
+			startTime = datetime.datetime.now()
 			self.on_playing_changed()
 			self.player.play(media)
-	
+			self.history.record(self.playing_media,
+					    self.satisfied_request,
+					    startTime)
+
 	def wait_for_media(self):
 		self.l.info("Randomqueue couldn't return media -- collection "+
 			    "is assumed to be empty -- waiting for media.")
