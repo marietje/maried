@@ -270,7 +270,7 @@ class Orchestrator(Module):
 	def wait_for_media(self):
 		self.l.info("Randomqueue couldn't return media -- collection "+
 			    "is assumed to be empty -- waiting for media.")
-		self.random.collection.got_media_event.wait()
+		self.randomQueue.random.collection.got_media_event.wait()
 		self.l.info("Woke!")
 
 class Random(Module):
