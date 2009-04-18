@@ -1,0 +1,17 @@
+includes:
+  - core.mirte.yaml
+definitions:
+  gstMediaInfo:
+    implementedBy: maried.gstreamer.GstMediaInfo
+    inherits: [mediaInfo]
+    settings:
+      gtkMainLoop: {type: gtkMainLoop}
+  gtkMainLoop:
+    implementedBy: maried.gstreamer.GtkMainLoop
+    run: true
+instances:
+  mediaInfo:
+    module: gstMediaInfo
+    gtkMainLoop: gtkMainLoop
+  gtkMainLoop:
+    module: gtkMainLoop
