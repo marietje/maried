@@ -10,8 +10,5 @@ definitions:
     implementedBy: maried.gstreamer.GtkMainLoop
     run: true
 instances:
-  mediaInfo:
-    module: gstMediaInfo
-    gtkMainLoop: gtkMainLoop
   gtkMainLoop:
     module: gtkMainLoop
