@@ -41,6 +41,9 @@ class GstMediaInfo(MediaInfo):
 					gst.format_get_by_nick('time'))[0]
 			self.result['length'] = raw/1000000000.0
 			self.event.set()
+			self.bin.set_state(gst.STATE_NULL)
+			bus.remove_signal_watch()
+			del(self.bin)
 		
 		def on_message(self, bus, message):
 			t = message.type
