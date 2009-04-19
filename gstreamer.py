@@ -2,9 +2,11 @@ from __future__ import with_statement
 
 import gst
 import gtk
+import time
 import pygst
-import threading
 import gobject
+import datetime
+import threading
 
 from maried.core import Module, Event, Player, MediaInfo
 
