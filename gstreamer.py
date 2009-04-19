@@ -102,7 +102,8 @@ class GstPlayer(Player):
 		try:
 			self._play(media)
 		except Exception:
-			self.idleCond.notifyAll()
+			with self.idleCond:
+				self.idleCond.notifyAll()
 			self.idle = True
 			raise
 
@@ -124,7 +125,8 @@ class GstPlayer(Player):
 		self.bin.set_state(gst.STATE_NULL)
 		with self.idleCond:
 			self.idle = True
-			self.idleCond.notifyAll()
+			with self.idleCond:
+				self.idleCond.notifyAll()
 	
 	def on_message(self, bus, message):
 		if message.type == gst.MESSAGE_ERROR:
