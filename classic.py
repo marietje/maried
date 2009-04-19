@@ -242,6 +242,9 @@ class ClassicRequestServer(Module):
 
 	def _handle_nowplaying(self, conn, addr, l, f, cmd):
 		media, request, endTime = self.desk.get_playing()
+		if (media is None or request is None or endTime is None):
+			self.l.warn("Not properly playing, yet")
+			return
 		endTimeTS = int(time.mktime(endTime.timetuple()) - media.length)
 		timeTS = int(time.mktime(datetime.datetime.now().timetuple()))
 		f.write( "ID::%s::Timestamp::%s::Length::%s::Time::%s\n" % (
@@ -449,9 +452,11 @@ class ClassicScreen(Module):
 		while self.running:
 			m, r, tmp = self.desk.get_playing()
 			by = "Marietje" if r is None else r.by.realName
+			artist = "?" if m is None else m.artist
+			title = "?" if m is None else m.title
 			with open(self.bannerFile, 'w') as f:
 				f.write("\scroll %s: %s - %s\n" % (
-					by, m.artist, m.title))
+					by, artist, title))
 			with self.cond:
 				self.cond.wait()
 	def stop(self):
