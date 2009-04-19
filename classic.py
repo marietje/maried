@@ -225,8 +225,9 @@ class ClassicRequestServer(Module):
 	def _handle_list_queue(self, conn, addr, l, f, cmd):
 		queue = self.desk.list_requests()
 		endTime = self.desk.get_playing()[2]
-		timeLeft = int(time.mktime(endTime.timetuple()) -
-			time.mktime(datetime.datetime.now().timetuple()))
+		timeLeft = (0 if endTime is None else
+			int(time.mktime(endTime.timetuple()) -
+			time.mktime(datetime.datetime.now().timetuple())))
 		f.write("TOTAL::%s::TIMELEFT::%s\n" % (len(queue),
 						       int(timeLeft)))
 		wf = BufferedFile(f)
