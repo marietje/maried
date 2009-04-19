@@ -9,6 +9,11 @@ definitions:
   gtkMainLoop:
     implementedBy: maried.gstreamer.GtkMainLoop
     run: true
+  gstPlayer:
+    implementedBy: maried.gstreamer.GstPlayer
+    inherits: [player]
+    settings:
+      gtkMainLoop: {type: gtkMainLoop}
 instances:
   gtkMainLoop:
     module: gtkMainLoop

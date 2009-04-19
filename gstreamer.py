@@ -82,3 +82,60 @@ class GstMediaInfo(MediaInfo):
 		if j.inError:
 			raise ValueError
 		return j.result
+
+class GstPlayer(Player):
+	def __init__(self, settings, logger):
+		super(GstPlayer, self).__init__(settings, logger)
+		self.bin = gst.element_factory_make('playbin', 'playbin')
+		self.bus = self.bin.get_bus()
+		self.bus.add_signal_watch()
+		self.bus.connect('message', self.on_message)
+		self.idleCond = threading.Condition()
+		self.idle = True
+
+	def play(self, media):
+		with self.idleCond:
+			if not self.idle:
+				self.l.warn("Waiting on idleCond")
+				self.idleCond.wait()
+			self.idle = False
+		try:
+			self._play(media)
+		except Exception:
+			self.idleCond.notifyAll()
+			self.idle = True
+			raise
+
+	def _play(self, media):
+		self.endTime = datetime.datetime.fromtimestamp(
+				time.time() + media.length)
+		try:
+			mf = media.mediaFile
+		except KeyError:
+			self.l.error("%s's mediafile doesn't exist" % media)
+			return
+		self.l.info("Playing %s" % media)
+		self.bus.set_uri("file:///"+self.mf.get_named_file())
+		self.bus.set_state(gst.STATE_PLAYING)
+		with self.idleCond:
+			self.idleCond.wait()
+	
+	def _reset(self):
+		self.bin.set_state(gst.STATE_NULL)
+		with self.idleCond:
+			self.idle = True
+			self.idleCond.notifyAll()
+	
+	def on_message(self, bus, message):
+		if message.type == gst.MESSAGE_ERROR:
+			error, debug = message.parse_error()
+			self.l.error("Gst: %s %s" % (error, debug))
+			self._reset()
+		elif message.type == gst.MESSAGE_EOS:
+			self._reset()
+	
+	def stop(self):
+		self._reset()
+		self.bus.remove_signal_watch()
+		del(self.bin)
+		del(self.bus)
