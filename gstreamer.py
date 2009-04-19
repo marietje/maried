@@ -28,43 +28,44 @@ class GstMediaInfo(MediaInfo):
 					'fakesink', 'fakesink')
 			self.bin.set_property('video-sink', fakesink)
 			self.bin.set_property('audio-sink', fakesink)
-			bus = self.bin.get_bus()
+			self.bus = bus = self.bin.get_bus()
 			bus.add_signal_watch()
 			bus.connect('message', self.on_message)
 			bus.connect('message::tag', self.on_tag)
 			self.bin.set_property('uri', 'file://'+path)
-			self.bin.set_state(gst.STATE_PAUSED)
-			states = self.bin.get_state(gst.CLOCK_TIME_NONE)
-			assert any(map(lambda x: isinstance(x, gst.State) and 
-					x == gst.STATE_PAUSED, states))
-			raw = self.bin.query_duration(
-					gst.format_get_by_nick('time'))[0]
-			self.result['length'] = raw/1000000000.0
-			self.event.set()
-			self.bin.set_state(gst.STATE_NULL)
-			bus.remove_signal_watch()
-			del(self.bin)
+			self.bin.set_state(gst.STATE_PLAYING)
 		
 		def on_message(self, bus, message):
 			t = message.type
 			if t == gst.MESSAGE_ERROR:
-				self.bin.set_state(gst.STATE_NULL)
 				error, debug = message.parse_error()
 				self.mi.l.error("Gst: %s %s" % (error, debug))
 				self.inError = True
-				self.event.set()
+				self.finish()
+			elif t == gst.MESSAGE_EOS:
+				raw = self.bin.query_duration(
+						gst.FORMAT_TIME)[0]
+				self.result['length'] = raw / (1000.0**3)
+				self.finish()
 		
 		def on_tag(self, bus, message):
 			tagList = message.parse_tag()
 			for key in tagList.keys():
 				if key == 'artist':
-					self.result['artist'] = tagList[key]
+					self.result[key] = tagList[key]
 				elif key == 'title':
-					self.result['title'] = tagList[key]
+					self.result[key] = tagList[key]
 
 		def interrupt(self):
 			self.inError = True
+			self.finish()
+
+		def finish(self):
 			self.event.set()
+			self.bin.set_state(gst.STATE_NULL)
+			self.bus.remove_signal_watch()
+			del(self.bin)
+			del(self.bus)
 	
 	def __init__(self, settings, logger):
 		super(GstMediaInfo, self).__init__(settings, logger)
