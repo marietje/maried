@@ -438,6 +438,8 @@ class ClassicRequestServer(Module):
 			conns = set(self.connections)
 		for conn in conns:
 			conn.interrupt()
+		with self.LAR_cond:
+			self.LAR_cond.notifyAll()
 
 class ClassicScreen(Module):
 	def __init__(self, settings, logger):
