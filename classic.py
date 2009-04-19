@@ -243,7 +243,7 @@ class ClassicRequestServer(Module):
 
 	def _handle_nowplaying(self, conn, addr, l, f, cmd):
 		media, request, endTime = self.desk.get_playing()
-		if (media is None or request is None or endTime is None):
+		if (media is None or endTime is None):
 			self.l.warn("Not properly playing, yet")
 			return
 		endTimeTS = int(time.mktime(endTime.timetuple()) - media.length)
@@ -452,7 +452,7 @@ class ClassicScreen(Module):
 		with self.cond:
 			self.cond.notify()
 	def run(self):
-		while self.running:
+		while True:
 			m, r, tmp = self.desk.get_playing()
 			by = "Marietje" if r is None else r.by.realName
 			artist = "?" if m is None else m.artist
@@ -461,7 +461,9 @@ class ClassicScreen(Module):
 				f.write("\scroll %s: %s - %s\n" % (
 					by, artist, title))
 			with self.cond:
+				if not self.running: break
 				self.cond.wait()
+				if not self.running: break
 	def stop(self):
 		self.running = False
 		with self.cond:
