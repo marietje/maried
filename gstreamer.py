@@ -94,12 +94,17 @@ class GstPlayer(Player):
 		self.bus.connect('message', self.on_message)
 		self.idleCond = threading.Condition()
 		self.idle = True
+		self.stopped = False
 
 	def play(self, media):
 		with self.idleCond:
+			if self.stopped:
+				return
 			if not self.idle:
 				self.l.warn("Waiting on idleCond")
 				self.idleCond.wait()
+			if self.stopped:
+				return
 			self.idle = False
 		try:
 			self._play(media)
@@ -118,8 +123,9 @@ class GstPlayer(Player):
 			self.l.error("%s's mediafile doesn't exist" % media)
 			return
 		self.l.info("Playing %s" % media)
-		self.bus.set_uri("file:///"+self.mf.get_named_file())
-		self.bus.set_state(gst.STATE_PLAYING)
+		self.bin.set_property('uri', 
+			"file:///"+mf.get_named_file())
+		self.bin.set_state(gst.STATE_PLAYING)
 		with self.idleCond:
 			self.idleCond.wait()
 	
@@ -141,5 +147,9 @@ class GstPlayer(Player):
 	def stop(self):
 		self._reset()
 		self.bus.remove_signal_watch()
+		with self.idleCond:
+			if not self.idle:
+				self.idleCond.wait()
+			self.stopped = True
 		del(self.bin)
 		del(self.bus)
