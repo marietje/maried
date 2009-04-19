@@ -649,6 +649,8 @@ class ClassicCollection(Collection):
 		key = self.db.add_media(*tmp)
 		with self.lock:
 			self._media[key] = ClassicMedia(self, key, *tmp)
+			if len(self._media) == 1:
+				self.got_media_event.set()
 		self.on_keys_changed()
 		self.on_changed()
 	
