@@ -232,6 +232,9 @@ class Orchestrator(Module):
 		super(Orchestrator, self).__init__(settings, logger)
 		self.on_playing_changed = Event()
 		self.lock = threading.Lock()
+		self.playing_media = None
+		self.satisfied_request = None
+		self.player.endTime = None
 	def get_playing(self):
 		with self.lock:
 			return (self.playing_media,
@@ -244,7 +247,8 @@ class Orchestrator(Module):
 	def run(self):
 		self.running = True
 		while self.running:
-			with self.lock:
+			self.lock.acquire()
+			try:
 				if not self.running: break
 				req = None
 				try:
@@ -256,10 +260,14 @@ class Orchestrator(Module):
 						media = self.randomQueue.shift(
 								).media
 					except EmptyQueueException:
+						self.lock.release()
 						self.wait_for_media()
+						self.lock.acquire()
 						continue
 				self.playing_media = media
 				self.satisfied_request = req
+			finally:
+				self.lock.release()
 			startTime = datetime.datetime.now()
 			self.on_playing_changed()
 			self.player.play(media)
