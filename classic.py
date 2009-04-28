@@ -656,7 +656,7 @@ class ClassicCollection(Collection):
 	
 	def _unlink_media(self, media):
 		with self.lock:
-			self._media.remove(media.key)
+			del(self._media[media.key])
 		self.db.remove_media(media.key)
 		self.on_keys_changed()
 		self.on_changed()
