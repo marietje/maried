@@ -38,7 +38,7 @@ class DiscreteRandomVariable(object):
 					if s == 0:
 						break
 		# we may have converged from the left, instead of the right
-		if v <= d[c][1]:
+		if c == len(d) or v <= d[c][1]:
 			c -= 1
 		return d[c][0]
 
