@@ -147,6 +147,12 @@ class IntSocketFile(object):
 			return
 		return self.socket.recv(amount)
 
+	def recv(self, amount=2048):
+		return self.readsome(amount)
+	def send(self, data):
+		self.write(data)
+		return len(data)
+
 	def interrupt(self):
 		self.running = False
 		self._sleep_socket_pair[0].send('Good morning!')
