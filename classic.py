@@ -273,6 +273,7 @@ class ClassicRequestServer(Module):
 		with self.LAR_cond:
 			self.LAR = so.getvalue()
 			self.LAR_count = len(media_l)
+			self.LAR_cond.notifyAll()
 
 	def _handle_list_all(self, conn, addr, l, f, cmd):
 		with self.LAR_cond:
