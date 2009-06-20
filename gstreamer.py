@@ -8,7 +8,7 @@ import gobject
 import datetime
 import threading
 
-from maried.core import Module, Event, Player, MediaInfo
+from maried.core import Module, Event, Player, MediaInfo, Stopped
 
 class GtkMainLoop(Module):
 	def run(self):
@@ -99,12 +99,12 @@ class GstPlayer(Player):
 	def play(self, media):
 		with self.idleCond:
 			if self.stopped:
-				return
+				raise Stopped
 			if not self.idle:
 				self.l.warn("Waiting on idleCond")
 				self.idleCond.wait()
 			if self.stopped:
-				return
+				raise Stopped
 			self.idle = False
 		try:
 			self._play(media)

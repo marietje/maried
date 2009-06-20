@@ -7,6 +7,8 @@ from maried.mirte import Module, Event
 
 class Denied(Exception):
 	pass
+class Stopped(Exception):
+	pass
 class EmptyQueueException(Exception):
 	pass
 
@@ -270,11 +272,16 @@ class Orchestrator(Module):
 				self.lock.release()
 			startTime = datetime.datetime.now()
 			self.on_playing_changed()
-			self.player.play(media)
+			try:
+				self.player.play(media)
+			except Stopped:
+				# TODO let the orchestrator wait on a new player
+				self.l.warn("Player raised Stopped.  Quitting")
+				break
 			self.history.record(self.playing_media,
 					    self.satisfied_request,
 					    startTime)
-
+	
 	def wait_for_media(self):
 		self.l.info("Randomqueue couldn't return media -- collection "+
 			    "is assumed to be empty -- waiting for media.")
