@@ -118,7 +118,7 @@ class AjaxServer(Module):
 						str(media.uploadedBy.key))
 			except KeyError:
 				pass
-			n_m.setAttribute('key', media.key)
+			n_m.setAttribute('key', str(media.key))
 			n_m.setAttribute('artist', media.artist)
 			n_m.setAttribute('title', media.title)
 			n_m.setAttribute('length', str(media.length))
