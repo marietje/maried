@@ -11,9 +11,9 @@ from BaseHTTPServer import BaseHTTPRequestHandler
 class AjaxServerHandler(BaseHTTPRequestHandler):
 	def __init__(self, request, addr, server, l):
 		self.l = l
-		self.path_map = {'/requests': self.do_requests,
-				 '/media': self.do_media,
-				 '/playing': self.do_playing}
+		self.path_map = {'requests': self.do_requests,
+				 'media': self.do_media,
+				 'playing': self.do_playing}
 		BaseHTTPRequestHandler.__init__(self, request, addr, server)
 	def log_message(self, format, *args, **kwargs):
 		self.l.info(format, *args, **kwargs)
@@ -22,10 +22,11 @@ class AjaxServerHandler(BaseHTTPRequestHandler):
 	def log_request(self, code=None, size=None):
 		self.l.info("Request: %s %s" % (code, size))
 	def do_GET(self):
-		if not self.path in self.path_map:
+		bits = self.path.split('/')
+		if len(bits) < 1 or not bits[1] in self.path_map:
 			self.send_error(404, "No such action")
 			return
-		self.path_map[self.path]()
+		self.path_map[bits[1]]()
 	def do_requests(self):
 		self.send_response(200)
 		self.send_header('Content-type', 'text/plain')
