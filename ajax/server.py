@@ -1,6 +1,8 @@
 from maried.core import Module, Event
 import threading
+import os.path
 import logging
+import maried
 import socket
 import select
 import time
@@ -11,7 +13,9 @@ from BaseHTTPServer import BaseHTTPRequestHandler
 class AjaxServerHandler(BaseHTTPRequestHandler):
 	def __init__(self, request, addr, server, l):
 		self.l = l
-		self.path_map = {'requests': self.do_requests,
+		self.path_map = {'htdocs': self.do_htdocs,
+				 '': self.do_htdocs,
+				 'requests': self.do_requests,
 				 'media': self.do_media,
 				 'playing': self.do_playing}
 		BaseHTTPRequestHandler.__init__(self, request, addr, server)
@@ -23,10 +27,27 @@ class AjaxServerHandler(BaseHTTPRequestHandler):
 		self.l.info("Request: %s %s" % (code, size))
 	def do_GET(self):
 		bits = self.path.split('/')
-		if len(bits) < 1 or not bits[1] in self.path_map:
+		if len(bits) < 1:
+			bits = ('', '')
+		if not bits[1] in self.path_map:
 			self.send_error(404, "No such action")
 			return
 		self.path_map[bits[1]]()
+	def do_htdocs(self):
+		bits = self.path.split('/')
+		file = '' if len(bits) < 3 else os.path.basename(bits[2])
+		if file == '': file = 'index.html'
+		path = os.path.join(self.server.htdocs_path, file)
+		if not os.path.isfile(path):
+			self.send_error(404, "No such file")
+			return
+		self.send_response(200)
+		self.end_headers()
+		with open(path, 'r') as f:
+			while True:
+				tmp = f.read(4096)
+				if len(tmp) == 0: break
+				self.wfile.write(tmp)
 	def do_requests(self):
 		self.send_response(200)
 		self.send_header('Content-type', 'text/plain')
@@ -77,6 +98,11 @@ class AjaxServer(Module):
 		self.MR_cond = threading.Condition()
 		self.desk.on_media_changed.register(
 				self.on_media_changed)
+		self.htdocs_path = os.path.join(
+				os.path.dirname(maried.ajax.server.__file__),
+				'htdocs')
+		if not os.path.exists(self.htdocs_path):
+			self.l.error("%s doens't exist!" % self.htdocs_path)
 	def on_media_changed(self):
 		self.threadPool.execute(self.do_refresh_MR)
 	def do_refresh_MR(self):
