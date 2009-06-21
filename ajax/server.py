@@ -83,9 +83,11 @@ class AjaxServerHandler(BaseHTTPRequestHandler):
 		doc.appendChild(n_play)
 		n_play.setAttribute('media', str(media.key))
 		if not req is None:
-			n_play.setAttribute('requestedBy', req.by)
+			n_play.setAttribute('requestedBy', str(req.by.key))
 		n_play.setAttribute('endTime',
 				str(time.mktime(endTime.timetuple())))
+		n_play.setAttribute('serverTime',
+				str(time.time()))
 		self.wfile.write(doc.toprettyxml(indent="  "))	
 
 class AjaxServer(Module):

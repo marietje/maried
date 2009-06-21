@@ -1,11 +1,28 @@
 body {
-	background: black;
 	padding-left: 50%;
-	color: white;
+	font-family: 'Georgia';
 }
 
-#main {
-	border: 1px solid white;
+#query {
+	text-align: center;
+	font-style: italic;
+}
+
+#wrapper {
 	margin-left: -400px;
 	width: 800px;
+}
+
+h1 {
+	text-align: center;
+	font-style: italic;
+}
+
+#resultsTable,
+#requestsTable{
+	width: 100%;
+}
+
+#requestsTable td.time{
+	text-align: right;
 }
