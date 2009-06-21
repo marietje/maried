@@ -1,6 +1,6 @@
 includes:
-  - threadPool.mirte.yaml
-  - core.mirte.yaml
+  - ../threadPool.mirte.yaml
+  - ../core.mirte.yaml
 definitions:
   ajaxServer:
     implementedBy: maried.ajax.AjaxServer

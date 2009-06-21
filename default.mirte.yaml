@@ -2,4 +2,4 @@ includes:
   - classic.mirte.yaml
   - gstreamer.mirte.yaml
   - shell.mirte.yaml
-  - ajax.mirte.yaml
+  - ajax/ajax.mirte.yaml
