@@ -50,7 +50,7 @@ class AjaxServerHandler(BaseHTTPRequestHandler):
 				self.wfile.write(tmp)
 	def do_requests(self):
 		self.send_response(200)
-		self.send_header('Content-type', 'text/plain')
+		self.send_header('Content-type', 'text/xml')
 		self.end_headers()
 		doc = Document()
 		n_reqs = doc.createElement('requests')
@@ -64,7 +64,7 @@ class AjaxServerHandler(BaseHTTPRequestHandler):
 		self.wfile.write(doc.toprettyxml(indent="  "))
 	def do_media(self):
 		self.send_response(200)
-		self.send_header('Content-type', 'text/plain')
+		self.send_header('Content-type', 'text/xml')
 		self.end_headers()
 		with self.server.MR_cond:
 			if self.server.MR is None:
@@ -75,7 +75,7 @@ class AjaxServerHandler(BaseHTTPRequestHandler):
 		self.wfile.write(txt)
 	def do_playing(self):
 		self.send_response(200)
-		self.send_header('Content-type', 'text/plain')
+		self.send_header('Content-type', 'text/xml')
 		self.end_headers()
 		media, req, endTime = self.server.desk.get_playing()
 		doc = Document()
