@@ -320,12 +320,12 @@ def walk_mirteFiles(path):
 	had = dict()
 	while stack:
 		path = stack.pop()
-		if path in had:
-			d = had[path]
+		if os.path.abspath(path) in had:
+			d = had[os.path.abspath(path)]
 		else:
 			with open(path) as f:
 				d = yaml.load(f)
-			had[path] = d
+			had[os.path.abspath(path)] = d
 		loadStack.append((path, d))
 		if not 'includes' in d:
 			continue
@@ -335,9 +335,9 @@ def walk_mirteFiles(path):
 			stack.append(p)
 	had = set()
 	for path, d in reversed(loadStack):
-		if path in had:
+		if os.path.abspath(path) in had:
 			continue
-		had.add(path)
+		had.add(os.path.abspath(path))
 		yield path, d
 
 def parse_cmdLine(args):
