@@ -37,13 +37,18 @@ function Main() {
 		$("#queryField").focus();
 	}
 	this.on_scroll = function() {
+		var me = this;
 		if(!this.showing_results)
 			return;
 		var diff = $(document).height() -
 			   $(document).scrollTop() -
 			   $(window).height();
-		if(diff < 20)
+		if (diff <= 0) {
 			this.fill_resultsTable();
+			setTimeout(function() {
+				me.on_scroll();	
+			},0)
+		}
 	}
 	this.run = function() {
 		var me = this;
@@ -90,6 +95,9 @@ function Main() {
 			$("#resultsTable").empty();
 			this.results_offset = 0;
 			this.fill_resultsTable();
+			setTimeout(function() {
+				me.on_scroll();
+			}, 0);
 			this.update_results = false;
 		}
 		if(this.got_playing && !this.updating_times) {
@@ -149,7 +157,7 @@ function Main() {
 			var m = this.media['_'+this.qc[cq][i][0]];
 			var tr = _tr([m.artist, m.title]);
 			t.append(tr);
-			if(got == 30) break;
+			if(got == 10) break;
 		}
 
 	};
