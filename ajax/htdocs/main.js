@@ -36,6 +36,15 @@ function Main() {
 	this.focus_queryField = function() {
 		$("#queryField").focus();
 	}
+	this.on_scroll = function() {
+		if(!this.showing_results)
+			return;
+		var diff = $(document).height() -
+			   $(document).scrollTop() -
+			   $(window).height();
+		if(diff < 20)
+			this.fill_resultsTable();
+	}
 	this.run = function() {
 		var me = this;
 		this.queryCheck = /[a-z0-9 ]/;
@@ -43,6 +52,7 @@ function Main() {
 		//$("#queryField").blur(function(){
 		//	setTimeout(function() { me.focus_queryField(); }, 0);
 		//});
+		$(document).scroll(function() { me.on_scroll(); });
 		$(window).focus(this.focus_queryField);
 		$("#resultsBar").hide();
 		$("#requestsBar").focus(this.focus_queryField);
@@ -66,6 +76,7 @@ function Main() {
 		this.update_results = false;
 		this.updating_times = false;
 		this.current_query = '';
+		this.results_offset = null;
 	};
 
 	this.do_updates = function() {
@@ -77,6 +88,7 @@ function Main() {
 		}
 		if(this.update_results) {
 			$("#resultsTable").empty();
+			this.results_offset = 0;
 			this.fill_resultsTable();
 			this.update_results = false;
 		}
@@ -130,11 +142,14 @@ function Main() {
 		if(!this.got_media)
 			return;
 		this.do_query();
-		for(var i = 0; i < this.qc[cq].length; i++) {
+		var got = 0;
+		for(; this.results_offset < this.qc[cq].length; this.results_offset++) {
+			got += 1;
+			var i = this.results_offset;
 			var m = this.media['_'+this.qc[cq][i][0]];
 			var tr = _tr([m.artist, m.title]);
 			t.append(tr);
-			if(i == 20) break;
+			if(got == 30) break;
 		}
 
 	};
