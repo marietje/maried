@@ -1,21 +1,28 @@
 <html>
 	<head>
 		<title>PijsMarietje</title>
-		<script type="text/javascript" src="/htdocs/main.js"></script>
-		<link rel="stylesheet"
-		      type="text/css"
+		<script type="text/javascript"
+			src="http://ajax.googleapis.com/ajax/libs/jquery/1.3.2/jquery.js"></script>
+		<link type="text/css" rel="stylesheet"
 		      href="/htdocs/main.css" />
+		<script type="text/javascript"
+			src="/htdocs/main.js">
+		</script>
 	</head>
 	<body>
 		<div id="wrapper">
-		<h1>PijsMarietje</h1>
-		<div id="main">
-			
+			<h1>PijsMarietje</h1>
+			<div id="queryBar">
+				<input id="queryField" />
+			</div>
+			<div id="requestsBar">
+				<table id="requestsTable">
+				</table>
+			</div>
+			<div id="resultsBar">
+				<table id="resultsTable">
+				</table>
+			</div>
 		</div>
-		</div>
-		<script type="text/javascript">
-			client = new Client();
-			client.run();
-		</script>
 	</body>
 </html>

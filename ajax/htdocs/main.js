@@ -1,360 +1,291 @@
-// (c) 2009 - Bas Westerbaan <bas@westerbaan.name>
-
-if( typeof XMLHttpRequest == "undefined" ) XMLHttpRequest = function() {
-	try { return new ActiveXObject("Msxml2.XMLHTTP.6.0") } catch(e) {}
-	try { return new ActiveXObject("Msxml2.XMLHTTP.3.0") } catch(e) {}
-	try { return new ActiveXObject("Msxml2.XMLHTTP") } catch(e) {}
-	try { return new ActiveXObject("Microsoft.XMLHTTP") } catch(e) {}
-	throw new Error( "This browser does not support XMLHttpRequest." )
-};
-
-function objById(id) {
-	var ret = 0;
-	if (document.getElementById)
-		ret = document.getElementById(id);
-	else if (document.all)
-		ret = document.all[id];
-	else if (document.layers)
-		ret = document.layers[id];
-	return ret;
-}
-
-function _ajax_request_orsc(req, callback) {
-	if(req.readyState == 4) {
-		callback(req.responseXML);
-	}
-}
-
-function ajax_request(path, callback) {
-	var client = new XMLHttpRequest();
-	client.onreadystatechange = function () { 
-		_ajax_request_orsc(this, callback);
-	};
-	client.open("GET", '/' + path);
-	client.send(null);
-}
-
-function zeroPadLeft(s, n) {
+function zpad_left(tmp, n) {
 	var pad = ''
-	for(var i=0; i<n - s.length; i++)
+	for(var i = tmp.length; i < n; i++)
 		pad += '0';
-	return pad + s;
+	return pad + tmp;
 }
 
-function niceTime(tmp) {
-	var neg = tmp < 0;
+function nice_time(tmp) {
+	neg = tmp < 0;
 	if(neg) tmp = -tmp;
-	tmp = parseInt(tmp)
-	var secs = tmp % 60;
-	tmp = parseInt(tmp /60);
-	var mins = tmp % 60;
-	tmp = parseInt(tmp / 60);
-	var hrs = tmp;
-	var ret;
+	var sec = parseInt(tmp % 60);
+	tmp /= 60;
+	var min = parseInt(tmp % 60);
+	var hrs = parseInt(tmp / 60);
 	if(hrs == 0)
-		ret = mins.toString() + ':' + 
-		      zeroPadLeft(secs.toString(), 2);
+		var ret = min.toString() + ':' + zpad_left(sec.toString(), 2);
 	else
-		ret = hrs.toString() + ':' +
-		      zeroPadLeft(min.toString(), 2) + ':' +
-		      zeroPadLeft(secs.toString(), 2);
-	if(neg) ret = '-'+ret;
+		var ret = hrs.toString() + ':' +
+			  zpad_left(min.toString(), 2) + ':' +
+			  zpad_left(sec,toString(), 2);
+	if(neg) ret = '-' + ret;
 	return ret;
 }
 
-function Client() {
+function _tr(data) {
+	n_tr = document.createElement('tr');
+	for(var i = 0; i < data.length; i++) {
+		n_td = document.createElement('td');
+		n_td.appendChild(document.createTextNode(data[i]));
+		n_tr.appendChild(n_td);
+	}
+	return n_tr;
+}
+
+function Main() {
+	this.focus_queryField = function() {
+		$("#queryField").focus();
+	}
 	this.run = function() {
-		var client = this;
-		this.got_playing = false;
-		this.got_requests = false;
-		this.got_media = false;
-		this.updating_times = false;
-		this.update_interval_id = null;
-		this.update_requests = false;
-		this.div_main = objById('main');
-		this.fetching_playing = false;
+		var me = this;
+		this.queryCheck = /[a-z0-9 ]/;
+		this.focus_queryField();
+		//$("#queryField").blur(function(){
+		//	setTimeout(function() { me.focus_queryField(); }, 0);
+		//});
+		$(window).focus(this.focus_queryField);
+		$("#resultsBar").hide();
+		$("#requestsBar").focus(this.focus_queryField);
+		$("#queryField").keypress(function(e){
+			return me.on_queryField_keyPress(e);
+		});
+		$("#queryField").keydown(function(e){
+			setTimeout(function() { me.check_queryField(); }, 0);
+		});
+		this.showing_results = false;
+		this.fetch_media();
+		this.fetch_requests();
+		this.fetch_playing();
 		this.fetching_media = false;
 		this.fetching_requests = false;
-		this.create_query_field();
-		this.create_requests_table();
-		this.create_results_table();
-		this.fetch_requests();
-		this.fetch_media();
-		this.fetch_playing();
-		this.query = '';
-		this.old_query = '';
-		this.shift_down = false;
-		this.ctrl_down = false;
-		this.alt_down = false;
-		this.qc = {};
-		document.onkeydown = function() { client.on_keydown(event); }
-		document.onkeyup = function() { client.on_keyup(event); }
+		this.fetching_playing = false;
+		this.got_media = false;
+		this.got_requests = false;
+		this.got_playing = false;
+		this.update_requests = false;
+		this.update_results = false;
+		this.updating_times = false;
+		this.current_query = '';
 	};
-	this.on_keydown = function(event) {
-		if (event.keyCode == 17) {
-			this.ctrl_down = true;
-		} else if (event.keyCode == 18) {
-			this.alt_down = true;
-		} else if(!this.ctrl_down &&
-			  !this.alt_down) {
-			if(event.keyCode >= 65 &&
-		   	   event.keyCode <= 90 ||
-			   event.keyCode == 32) {
-				this.query += String.fromCharCode(
-						event.keyCode).toLowerCase();
-			} else if (event.keyCode == 8) {
-				if(this.query.length != 0)
-					this.query = this.query.slice(0,-1);
-			}
-		} else if (this.ctrl_down && !this.alt_down) {
-			if(event.keyCode == 85) {
-				this.query = '';
-			}
-		}
-		this.do_updates()
-	};
-	this.on_keyup = function(event) {
-		if(event.keyCode == 17) {
-			this.ctrl_down = false;
-		} else if (event.keyCode == 18) {
-			this.alt_down = false;
-		}
-	};
-	this.fetch_requests = function() {
-		if(this.fetching_requests) return;
-		this.fetching_requests = true;
-		ajax_request('requests', function(doc) {
-				client.on_got_requests(doc); });
-	};
-	this.fetch_playing = function() {
-		if(this.fetching_playing) return;
-		this.fetching_playing = true;
-		ajax_request('playing', function(doc) {
-				client.on_got_playing(doc); });
-	};
-	this.fetch_media = function() {
-		if(this.fetching_media) return;
-		this.fetching_media = true;
-		ajax_request('media', function(doc) {
-				client.on_got_media(doc); });
-	};
+
 	this.do_updates = function() {
-		if(this.update_requests && this.got_requests) {
-			this.empty_table(this.requests_table);
-			this.fill_requests_table();
+		var me = this;
+		if(this.update_requests) {
 			this.update_requests = false;
+			$("#requestsTable").empty();
+			this.fill_requestsTable();
 		}
-		if(this.got_playing && this.got_media !=
-		   this.updating_times) {
-			this.updating_times = !this.updating_times;
-			if(this.updating_times) {
-				var me = this;
-				this.update_interval_id = setInterval(
-					function() { me.update_times(); }, 1000);
-			} else {
-				clearInterval(this.update_interval_id);
-			}
+		if(this.update_results) {
+			$("#resultsTable").empty();
+			this.fill_resultsTable();
+			this.update_results = false;
 		}
-		if(this.query != this.old_query) {
-			if(this.query == '') {
-				this.query_div.style.display = 'none';
-				this.results_table.style.display = 'none';
-				this.requests_table.style.display = 'block';
-			} else {
-				this.query_div.style.display = 'block';
-				this.results_table.style.display = 'block';
-				this.requests_table.style.display = 'none';
-				this.query_div.firstChild.nodeValue = this.query;
-				this.empty_table(this.results_table);
-				this.fill_results_table();
-			}
-			this.old_query = this.query;
+		if(this.got_playing && !this.updating_times) {
+			this.updating_times = true;
+			setInterval(function() {
+				me.update_times();
+			}, 1000);
 		}
 	};
+
 	this.update_times = function() {
-		// we know got_playing and got_media
-		var diff = (this.playing_endTime 
-				- new Date().getTime() / 1000.0
-				- this.playing_serverTime
-				+ this.playing_requestTime);
-		var els = this.requests_table.getElementsByTagName('tr');
-		for(var i=0; i<els.length; i++) {
-			var el = els[i].getElementsByClassName('time')[0];
-			var txt = '';
-			if(els[i].offsetTime != null)
-				txt = niceTime(els[i].offsetTime + diff);
-			el.firstChild.nodeValue = txt;
-		}
-		if(diff < 0) {
+		var me = this;
+		var diff = (this.playing_endTime
+			    - new Date().getTime() / 1000.0
+			    - this.playing_serverTime
+			    + this.playing_requestTime);
+		$('#requestsTable tr').each(function(i, tr){
+			var offset = $(tr).data('offset');
+			$('.time', tr).text(offset == null ? '' 
+					: nice_time(offset + diff));
+		});
+		if(diff <= 0) {
 			this.fetch_requests();
 			this.fetch_playing();
 		}
 	};
-	this.on_got_requests = function(doc) {
-		this.got_requests = true;
-		this.fetching_requests = false;
-		this.requests = [];
-		var els = doc.firstChild.getElementsByTagName('request');
-		for(var i=0; i<els.length; i++) {
-			if(els[i].attributes['requestedBy'])
-				var rb = els[i].attributes['requestedBy'].value;
-			else var rb = 'marietje';
-			this.requests[i] = {
-				media: els[i].attributes['media'].value,
-				requestedBy: rb };
-		}
-		this.update_requests = true;
-		this.do_updates();
-	};
-	this.on_got_media = function(doc) {
-		this.got_media = true;
-		this.fetching_media = false;
-		this.media = {};
-		var els = doc.firstChild.getElementsByTagName('media');
-		this.qc[''] = [];
-		for(var i=0; i<els.length; i++) {
-			this.media['_'+els[i].attributes['key'].value] = {
-				length: parseFloat(els[i].attributes.getNamedItem('length').value),
-				artist: els[i].attributes['artist'].value,
-				title: els[i].attributes['title'].value
-			};
-			cleaned = els[i].attributes['artist'].value.toLowerCase().replace(/[^a-z0-9 ]/g,'') +
-				"|" + els[i].attributes['title'].value.toLowerCase().replace(/[^a-z0-9]/g, '');
-			this.qc[''][i] = [ els[i].attributes['key'].value, cleaned ];
-		}
-		this.update_requests = true;
-		this.do_updates();
-	};
-	this.on_got_playing = function(doc) {
-		this.got_playing = true;
-		this.fetching_playing = false;
-		this.playing_media = doc.firstChild.attributes['media'].value;
-		this.playing_endTime = parseFloat(doc.firstChild.attributes['endTime'].value);
-		this.playing_requestTime = new Date().getTime() / 1000.0;
-		this.playing_serverTime = parseFloat(doc.firstChild.attributes['serverTime'].value);
-		this.update_requests = true;
-		this.do_updates();
-	};
-	this.create_results_table = function() {
-		n_t = document.createElement('table');
-		n_t.setAttribute('id', 'resultsTable');
-		n_t.style.display = 'none';
-		this.div_main.appendChild(n_t);
-		this.results_table = n_t;
-	};
-	this.create_query_field = function() {
-		n_d = document.createElement('div');
-		n_d.setAttribute('id', 'query');
-		n_d.appendChild(document.createTextNode('blaat'));
-		n_d.style.display = 'none';
-		this.div_main.appendChild(n_d);
-		this.query_div = n_d;
-	};
-	this.create_requests_table = function() {
-		n_t = document.createElement('table');
-		n_t.setAttribute('id', 'requestsTable');
-		this.div_main.appendChild(n_t);
-		this.requests_table = n_t;
-	};
-
-	this.empty_table = function(table) {
-		var trs = table.getElementsByTagName('tr');
-		var toDel = [];
-		for(var i=0; i<trs.length; i++)
-			toDel[i] = trs[i];
-		for(var i=0; i<toDel.length; i++)
-			table.removeChild(toDel[i]);
-	}
-
-	this._create_tr_for_request = function(media, requestedBy, time) {
-		n_tr = document.createElement('tr');
-		if(this.got_media) {
-			txta = this.media['_'+media].artist;
-			txtt = this.media['_'+media].title;
-		} else {
-			txta = media;
-			txtt = ''; 
-		}
-		n_td0 = document.createElement('td');
-		n_td0.appendChild(document.createTextNode(
-					requestedBy))
-		n_td1 = document.createElement('td');
-		n_td1.appendChild(document.createTextNode(txta));
-		n_td2 = document.createElement('td');
-		n_td2.appendChild(document.createTextNode(txtt));
-		n_td3 = document.createElement('td');
-		n_td3.setAttribute('class', 'time')
-		n_td3.appendChild(document.createTextNode(time));
-		n_tr.offsetTime = time;
-		n_tr.appendChild(n_td0);
-		n_tr.appendChild(n_td1);
-		n_tr.appendChild(n_td2);
-		n_tr.appendChild(n_td3);
-		return n_tr;
-	}
 
 	this.do_query = function() {
-		if(this.query == '')
-			return;
-		var s;
-		for(s=this.query.length;
-		    this.qc[this.query.slice(0,s)] == null;
+		var cq = this.current_query;
+		for(var s = cq.length;
+		    !this.qc[cq.slice(0, s)];
 		    s--);
-		for(var i=s; i<this.query.length; i++){
-			var from = this.query.slice(0,i);
-			var to = this.query.slice(0,i+1);
+		for(var i = s; i < cq.length; i++) {
+			var from = cq.slice(0, i);
+			var to = cq.slice(0, i + 1);
 			var k = 0;
 			this.qc[to] = [];
-			for(var j=0; j<this.qc[from].length; j++) {
+			for(var j = 0; j < this.qc[from].length; j++) {
 				if(this.qc[from][j][1].indexOf(to) != -1) {
 					this.qc[to][k] = this.qc[from][j];
 					k += 1;
 				}
 			}
 		}
-	}
+	};
 
-	this.fill_results_table = function() {
+	this.fill_resultsTable = function() {
+		var t = $("#resultsTable");
+		var cq = this.current_query;
 		if(!this.got_media)
 			return;
 		this.do_query();
-		for(var i=0; i<this.qc[this.query].length; i++) {
-			this.results_table.appendChild(
-				this._create_tr_for_results(
-					this.qc[this.query][i][0]));
-			if(i == 40) break;
+		for(var i = 0; i < this.qc[cq].length; i++) {
+			var m = this.media['_'+this.qc[cq][i][0]];
+			var tr = _tr([m.artist, m.title]);
+			t.append(tr);
+			if(i == 20) break;
 		}
-	}
 
-	this._create_tr_for_results = function(media) {
-		n_tr = document.createElement('tr');
-		n_tda = document.createElement('td');
-		n_tdt = document.createElement('td');
-		n_tda.appendChild(document.createTextNode(this.media['_'+media].artist));
-		n_tdt.appendChild(document.createTextNode(this.media['_'+media].title));
-		n_tr.appendChild(n_tda);
-		n_tr.appendChild(n_tdt);
-		return n_tr;
-	}
+	};
 
-	this.fill_requests_table = function() {
-		var ctime = 0.0;
-		if(this.got_playing) {
-			this.requests_table.appendChild(
-				this._create_tr_for_request(
-					this.playing_media,
-					'', null));
-		}
-							 
-		for(var i=0; i<this.requests.length; i++){
-			media = this.requests[i].media;
-			requestedBy = this.requests[i].requestedBy;
-			this.requests_table.appendChild(
-				this._create_tr_for_request(media,
-							    requestedBy,
-							    ctime));
-			if(this.got_media)
-				ctime += this.media['_'+media].length;
+	this.fill_requestsTable = function() {
+		var t = $("#requestsTable");
+		var start = (this.got_playing ? -1 : 0);
+		var end = (this.got_requests ? this.requests.length : 0);
+		var ctime = null;
+		for(var i = start; i < end; i++) {
+			var m = (i == -1 ? this.playing_media
+				: this.requests[i].media);
+			var b = (i == -1 ? this.playing_requestedBy
+				: this.requests[i].by);
+			if(!b) b = 'marietje';
+			var txt_a = m;
+			var txt_t = '';
+			if(this.got_media) {
+				txt_a = this.media['_'+m].artist;
+				txt_t = this.media['_'+m].title;
+			}
+			tr = _tr([b, txt_a, txt_t, (ctime == null ? '' : ctime)]);
+			$(tr).data('offset', ctime);
+			ctime = (i == -1 ? 0 : 
+				(this.got_media ?
+				 ctime + this.media['_'+m].length : 0));
+			$('td:eq(0)',tr).addClass('by');
+			$('td:eq(1)',tr).addClass('artist');
+			$('td:eq(2)',tr).addClass('title');
+			$('td:eq(3)',tr).addClass('time');
+			t.append(tr);
 		}
 	};
+	
+	this.check_queryField = function(e) {
+		var q = $("#queryField").val();
+		if(q == this.current_query)
+			return;
+		this.current_query = q;
+		if(q == '' && this.showing_results){
+			$('#resultsBar').hide('fast');
+			$('#requestsBar').show('fast');
+			this.showing_results = false;
+		} else if (q != '' && !this.showing_results) {
+			$('#resultsBar').show('fast');
+			$('#requestsBar').hide('fast');
+			this.showing_results = true;
+		}
+		if(q != '') {
+			this.update_results = true;
+			this.do_updates();
+		}
+
+	};
+
+	this.on_queryField_keyPress = function(e) {
+		if(e.which == 8)
+			return true;
+		else if (e.which == 0)
+			return true;
+		else if(e.which == 21) // C-u
+			$("#queryField").val('');
+		var c = String.fromCharCode(e.which);
+		if(!this.queryCheck.test(c)){
+			// Convert uppercase to lowercase
+			if(this.queryCheck.test(c.toLowerCase()))
+				$("#queryField").val($("#queryField").val() 
+						+ c.toLowerCase());
+			return false;
+		} else
+			return true;
+	};
+
+	this.fetch_media = function() {
+		var me = this;
+		if(this.fetching_media) return;
+		this.fetching_media = true;
+		$.get('/media', function(req) {
+			me.on_got_media(req);
+		});
+	};
+	this.fetch_requests = function() {
+		var me = this;
+		if(this.fetching_requests) return;
+		this.fetching_requests = true;
+		$.get('/requests', function(req) {
+			me.on_got_requests(req);
+		});
+	};
+	this.fetch_playing = function() {
+		var me = this;
+		if(this.fetching_playing) return;
+		this.fetching_playing = true;
+		$.get('/playing', function(req) {
+			me.on_got_playing(req);
+		});
+	};
+
+	this.on_got_media = function(req) {
+		var me = this;
+		this.got_media = true;
+		this.fetching_media = false;
+		this.media = {};
+		this.qc = {'': []};
+		$("media", req.firstChild).each(function(i, r) {
+			m = $(r);
+			me.media['_'+m.attr('key')] = {
+				artist: m.attr('artist'),
+				title: m.attr('title'),
+				length: parseFloat(m.attr('length'))
+			};
+			var cr = /[^a-z0-9 ]/g;
+			me.qc[''][i] = [
+				m.attr('key'),
+				m.attr('artist').toLowerCase().replace(cr, '') + '|' +
+				m.attr('title').toLowerCase().replace(cr, '')];
+
+		});
+		this.update_requests = true;
+		this.update_results = true;
+		this.do_updates();
+	};
+	this.on_got_requests = function(req) {
+		var me = this;
+		this.got_requests = true;
+		this.fetching_requests = false;
+		this.requests = [];
+		$("request", req).each(function(i, r) {
+			m = $(r);
+			me.requests[i] = {
+				media: m.attr('media'),
+				by: m.attr('by')
+			};
+		});
+		this.update_requests = true;
+		this.do_updates();
+	};
+	this.on_got_playing = function(req) {
+		this.got_playing = true;
+		this.fetching_playing = false;
+		var m = $(req.firstChild);
+		this.playing_media = m.attr('media');
+		this.playing_requestedBy = m.attr('requestedBy');
+		this.playing_endTime = parseFloat(m.attr('endTime'));
+		this.playing_serverTime = parseFloat(m.attr('serverTime'));
+		this.playing_requestTime = new Date().getTime() / 1000.0;
+		this.update_requests = true;
+		this.do_updates();
+	};
 }
+
+main = new Main();
+$(document).ready(function(){main.run();});
+
