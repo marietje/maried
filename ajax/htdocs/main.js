@@ -17,7 +17,7 @@ function nice_time(tmp) {
 	else
 		var ret = hrs.toString() + ':' +
 			  zpad_left(min.toString(), 2) + ':' +
-			  zpad_left(sec,toString(), 2);
+			  zpad_left(sec.toString(), 2);
 	if(neg) ret = '-' + ret;
 	return ret;
 }
