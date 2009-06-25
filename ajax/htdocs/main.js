@@ -167,6 +167,8 @@ function Main() {
 			var i = this.results_offset;
 			var m = this.media['_'+this.qc[cq][i][0]];
 			var tr = _tr([m.artist, m.title]);
+			$('td:eq(0)',tr).addClass('artist');
+			$('td:eq(1)',tr).addClass('title');
 			t.append(tr);
 			if(got == 10) break;
 		}

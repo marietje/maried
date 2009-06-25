@@ -7,6 +7,14 @@ body {
 	width: 100%;
 }
 
+#resultsTable .artist { width: 50% }
+#resultsTable .title { width: 50% }
+
+#requestsTable .by { width: 10% }
+#requestsTable .artist { width: 40% }
+#requestsTable .title { width: 40% }
+#requestsTable .time { width: 10% }
+
 #requestsTable .time {
 	text-align: right;
 }
