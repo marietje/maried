@@ -62,7 +62,8 @@ function Main() {
 	};
 	this.run = function() {
 		var me = this;
-		this.queryCheck = /[a-z0-9 ]/;
+		this.queryCheck = /^[a-z0-9 ]*$/;
+		this.queryReplace = /[^a-z0-9 ]/g;
 		this.focus_queryField();
 		//$("#queryField").blur(function(){
 		//	setTimeout(function() { me.focus_queryField(); }, 0);
@@ -208,6 +209,10 @@ function Main() {
 	this.check_queryField = function(e) {
 		var me = this;
 		var q = $("#queryField").val();
+		if(!this.queryCheck.test(q)) {
+			q = q.toLowerCase().replace(this.queryReplace, '');
+			$("#queryField").val(q);
+		}
 		if(q == this.current_query)
 			return;
 		this.current_query = q;
@@ -233,21 +238,10 @@ function Main() {
 	};
 
 	this.on_queryField_keyPress = function(e) {
-		if(e.which == 8)
-			return true;
-		else if (e.which == 0)
-			return true;
-		else if(e.which == 21) // C-u
+		var me = this;
+		if(e.which == 21) // C-u
 			$("#queryField").val('');
-		var c = String.fromCharCode(e.which);
-		if(!this.queryCheck.test(c)){
-			// Convert uppercase to lowercase
-			if(this.queryCheck.test(c.toLowerCase()))
-				$("#queryField").val($("#queryField").val() 
-						+ c.toLowerCase());
-			return false;
-		} else
-			return true;
+		setTimeout(function() { me.check_queryField(); }, 0);
 	};
 
 	this.fetch_media = function() {
@@ -283,7 +277,7 @@ function Main() {
 		this.qc = {'': []};
 		var i = 0;
 		for(var _k in req) {
-			var cr = /[^a-z0-9 ]/g;
+			var cr = this.queryReplace;
 			var k = _k.slice(1);
 			me.qc[''][i++] = [
 				k,
