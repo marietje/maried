@@ -8,6 +8,10 @@ body {
 	table-layout: fixed;
 }
 
+#resultsTable tr:hover {
+	background-color: yellow;
+}
+
 .artist,
 .title {
 	overflow: hidden;
