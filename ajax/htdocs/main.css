@@ -5,6 +5,14 @@ body {
 #resultsTable,
 #requestsTable {
 	width: 100%;
+	table-layout: fixed;
+}
+
+.artist,
+.title {
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
 }
 
 #resultsTable .artist { width: 50% }
