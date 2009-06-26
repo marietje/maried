@@ -184,6 +184,7 @@ function Main() {
 	};
 
 	this.fill_resultsTable = function() {
+		var me = this;
 		var t = $("#resultsTable");
 		var cq = this.current_query;
 		if(!this.got_media)
@@ -197,6 +198,12 @@ function Main() {
 			var tr = _tr([m[0], m[1]]);
 			$('td:eq(0)',tr).addClass('artist');
 			$('td:eq(1)',tr).addClass('title');
+			$(tr).click(function() {
+					$("#queryField").val("");
+					me.check_queryField();
+					$("#queryField").focus();
+					me.fetch_requests();
+				});
 			t.append(tr);
 			if(got == 10) break;
 		}
