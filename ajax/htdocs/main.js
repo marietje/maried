@@ -166,7 +166,7 @@ function Main() {
 			got += 1;
 			var i = this.results_offset;
 			var m = this.media['_'+this.qc[cq][i][0]];
-			var tr = _tr([m.artist, m.title]);
+			var tr = _tr([m[0], m[1]]);
 			$('td:eq(0)',tr).addClass('artist');
 			$('td:eq(1)',tr).addClass('title');
 			t.append(tr);
@@ -189,8 +189,8 @@ function Main() {
 			var txt_a = m;
 			var txt_t = '';
 			if(this.got_media) {
-				txt_a = this.media['_'+m].artist;
-				txt_t = this.media['_'+m].title;
+				txt_a = this.media['_'+m][0];
+				txt_t = this.media['_'+m][1];
 			}
 			tr = _tr([b, txt_a, txt_t, (ctime == null ? '' : ctime)]);
 			$(tr).data('offset', ctime);
@@ -254,7 +254,7 @@ function Main() {
 		var me = this;
 		if(this.fetching_media) return;
 		this.fetching_media = true;
-		$.get('/media', function(req) {
+		$.getJSON('/media', function(req) {
 			me.on_got_media(req);
 		});
 	};
@@ -279,22 +279,17 @@ function Main() {
 		var me = this;
 		this.got_media = true;
 		this.fetching_media = false;
-		this.media = {};
+		this.media = req;
 		this.qc = {'': []};
-		$("media", req.firstChild).each(function(i, r) {
-			m = $(r);
-			me.media['_'+m.attr('key')] = {
-				artist: m.attr('artist'),
-				title: m.attr('title'),
-				length: parseFloat(m.attr('length'))
-			};
+		var i = 0;
+		for(var _k in req) {
 			var cr = /[^a-z0-9 ]/g;
-			me.qc[''][i] = [
-				m.attr('key'),
-				m.attr('artist').toLowerCase().replace(cr, '') + '|' +
-				m.attr('title').toLowerCase().replace(cr, '')];
-
-		});
+			var k = _k.slice(1);
+			me.qc[''][i++] = [
+				k,
+				req[_k][0].toLowerCase().replace(cr, '') + '|' +
+				req[_k][1].toLowerCase().replace(cr, '')];
+		};
 		this.update_requests = true;
 		this.update_results = true;
 		this.do_updates();

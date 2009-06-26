@@ -1,4 +1,5 @@
 from maried.core import Module, Event
+import simplejson
 import threading
 import os.path
 import logging
@@ -64,7 +65,7 @@ class AjaxServerHandler(BaseHTTPRequestHandler):
 		self.wfile.write(doc.toprettyxml(indent="  "))
 	def do_media(self):
 		self.send_response(200)
-		self.send_header('Content-type', 'text/xml')
+		self.send_header('Content-type', 'text/javascript')
 		self.end_headers()
 		with self.server.MR_cond:
 			if self.server.MR is None:
@@ -110,24 +111,13 @@ class AjaxServer(Module):
 	def do_refresh_MR(self):
 		self.l.info("Refreshing cached /media response")
 		self.l.info
-		doc = Document()
-		n_media = doc.createElement('media')
-		doc.appendChild(n_media)
+		doc = {}
 		for media in self.desk.list_media():
-			n_m = doc.createElement('media')
-			try:
-				n_m.setAttribute('uploadedBy',
-						str(media.uploadedBy.key))
-			except KeyError:
-				pass
-			n_m.setAttribute('key', str(media.key))
-			n_m.setAttribute('artist', media.artist)
-			n_m.setAttribute('title', media.title)
-			n_m.setAttribute('length', str(media.length))
-			n_m.setAttribute('uploadedTimestamp',
-					str(media.uploadedTimestamp))
-			n_media.appendChild(n_m)
-		txt = doc.toprettyxml(indent="  ")
+			doc['_'+str(media.key)] = [
+					media.artist,
+					media.title,
+					str(media.length) ]
+		txt = simplejson.dumps(doc)
 		with self.MR_cond:
 			self.MR = txt
 			self.MR_cond.notifyAll()
