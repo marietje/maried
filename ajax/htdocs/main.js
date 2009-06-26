@@ -197,7 +197,7 @@ function Main() {
 			$(tr).data('offset', ctime);
 			ctime = (i == -1 ? 0 : 
 				(this.got_media ?
-				 ctime + this.media['_'+m].length : 0));
+				 ctime + this.media['_'+m][2] : 0));
 			$('td:eq(0)',tr).addClass('by');
 			$('td:eq(1)',tr).addClass('artist');
 			$('td:eq(2)',tr).addClass('title');
