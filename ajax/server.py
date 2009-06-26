@@ -1,5 +1,4 @@
 from maried.core import Module, Event
-import simplejson
 import threading
 import os.path
 import logging
@@ -8,6 +7,7 @@ import socket
 import select
 import time
 
+from cStringIO import StringIO
 from xml.dom.minidom import Document
 from BaseHTTPServer import BaseHTTPRequestHandler
 
@@ -112,12 +112,20 @@ class AjaxServer(Module):
 		self.l.info("Refreshing cached /media response")
 		self.l.info
 		doc = {}
-		for media in self.desk.list_media():
-			doc['_'+str(media.key)] = [
-					media.artist,
-					media.title,
-					str(media.length) ]
-		txt = simplejson.dumps(doc)
+		b = StringIO()
+		b.write('{')
+		first = True
+		for media in sorted(self.desk.list_media(),
+				    cmp=lambda x,y: 2*cmp(x.artist, y.artist) +
+				    		    cmp(x.title, y.title)):
+			if first: first = False
+			else: b.write(',')
+			b.write("_%s:[%s,%s,%s]" % (media.key,
+						        repr(media.artist),
+						        repr(media.title),
+						        media.length))
+		b.write('}')
+		txt = b.getvalue()
 		with self.MR_cond:
 			self.MR = txt
 			self.MR_cond.notifyAll()
