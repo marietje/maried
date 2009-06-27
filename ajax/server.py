@@ -1,4 +1,4 @@
-from maried.core import Module, Event
+from maried.core import Module, Event, Denied
 import threading
 import os.path
 import logging
@@ -65,7 +65,7 @@ class AjaxServerHandler(BaseHTTPRequestHandler):
 		try:
 			self.server.desk.request_media(media, user)
 		except Denied, e:
-			return self._respond_to_request('denied', str(e))
+			return self._respond_to_request('denied', repr(e))
 		self._respond_to_request('ok')
 
 	def _respond_to_request(self, code, message=None):

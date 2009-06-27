@@ -288,6 +288,9 @@ function Main() {
 			return;
 		} else if (code == 'ok') {
 			this.fetch_requests();
+			$.growlUI('Success', 'Your request was succesfull');
+		} else if (code == 'denied') {
+			$.growlUI('Denied', $(doc.firstChild).attr('message'));
 		}
 	};
 
