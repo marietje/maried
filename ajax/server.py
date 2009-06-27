@@ -18,6 +18,7 @@ class AjaxServerHandler(BaseHTTPRequestHandler):
 				 '': self.do_htdocs,
 				 'requests': self.do_requests,
 				 'media': self.do_media,
+				 'request': self.do_request,
 				 'playing': self.do_playing}
 		BaseHTTPRequestHandler.__init__(self, request, addr, server)
 	def log_message(self, format, *args, **kwargs):
@@ -49,6 +50,34 @@ class AjaxServerHandler(BaseHTTPRequestHandler):
 				tmp = f.read(4096)
 				if len(tmp) == 0: break
 				self.wfile.write(tmp)
+	def do_request(self):
+		bits = self.path.split('/')
+		if len(bits) < 6:
+			self.send_error(400, "Wrong request")
+			return
+		user, password, media = bits[2:5]
+		try: user = self.server.desk.user_by_key(user)
+		except KeyError: return self._respond_to_request('wrong-login')
+		try: media = self.server.desk.media_by_key(media)
+		except KeyError: return self._respond_to_request('wrong-media')
+		if not user.check_password(password):
+			return self._respond_to_request('wrong-login')
+		try:
+			self.server.desk.request_media(media, user)
+		except Denied:
+			return self._respond_to_request('denied')
+		self._respond_to_request('ok')
+
+	def _respond_to_request(self, code):
+		self.send_response(200)
+		self.send_header('Content-type', 'text/plain')
+		self.end_headers()
+		doc = Document()
+		n_stat = doc.createElement('status')
+		doc.appendChild(n_stat)
+		n_stat.setAttribute('code', code)
+		self.wfile.write(doc.toprettyxml(indent="  "))
+		
 	def do_requests(self):
 		self.send_response(200)
 		self.send_header('Content-type', 'text/xml')
