@@ -3,7 +3,7 @@ body {
 }
 
 #footer {
-	text-align: center;
+	text-align: right;
 	font-style: italic;
 	font-size: smaller;
 	color: gray;
@@ -47,7 +47,6 @@ body {
 
 #queryField {
 	width: 100%;
-	border: 0;
 	text-align: center;
 }
 
@@ -58,5 +57,8 @@ body {
 h1 {
 	font-style: italic;
 	font-weight: normal;
+}
+
+div.growlUI h1 {
 	text-align: center;
 }
