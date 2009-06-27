@@ -632,7 +632,7 @@ class ClassicCollection(Collection):
 		return self._media.keys()
 
 	def by_key(self, key):
-		return self._media[key]
+		return self._media[int(key)]
 
 	def _user_by_key(self, key):
 		return self.users[key]
