@@ -89,6 +89,13 @@ function Main() {
 	};
 	this.run = function() {
 		var me = this;
+		this.loginForm = $('#loginForm');
+		this.loginForm.dialog(
+			{position: 'top',
+			 modal: true,
+			 hide: 'explode',
+			 autoOpen: false,
+			 show: 'explode'});
 		this.queryCheck = /^[a-z0-9 ]*$/;
 		this.queryReplace = /[^a-z0-9 ]/g;
 		this.focus_queryField();
