@@ -52,7 +52,7 @@ class AjaxServerHandler(BaseHTTPRequestHandler):
 				self.wfile.write(tmp)
 	def do_request(self):
 		bits = self.path.split('/')
-		if len(bits) < 6:
+		if len(bits) < 5:
 			self.send_error(400, "Wrong request")
 			return
 		user, password, media = bits[2:5]
