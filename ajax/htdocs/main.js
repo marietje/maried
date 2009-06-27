@@ -214,8 +214,8 @@ function Main() {
 			got += 1;
 			var i = this.results_offset;
 			var m = this.media['_'+this.qc[cq][i][0]];
-			$(tr).data('key', this.qc[cq][i][0]);
 			var tr = _tr([m[0], m[1]]);
+			$(tr).data('key', this.qc[cq][i][0]);
 			$('td:eq(0)',tr).addClass('artist');
 			$('td:eq(1)',tr).addClass('title');
 			$(tr).click(function() {
