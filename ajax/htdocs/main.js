@@ -87,15 +87,27 @@ function Main() {
 	this.down_scroll_semaphore = function() {
 		this.scroll_semaphore -= 1;
 	};
+	this.on_loginForm_keyDown = function(e) {
+		if(e.which == 27) {
+			$.unblockUI();
+		} else if(e.which == 13) {
+			$.unblockUI();
+			createCookie('user', $('#loginFormUser').val());
+			createCookie('pass', $('#loginFormPass').val());
+			this.request_media(this.pendingRequest);
+		}
+	};
 	this.run = function() {
 		var me = this;
+		$.blockUI.defaults.applyPlatformOpacityRules = false;
 		this.loginForm = $('#loginForm');
-		this.loginForm.dialog(
-			{position: 'top',
-			 modal: true,
-			 hide: 'explode',
-			 autoOpen: false,
-			 show: 'explode'});
+		this.loginForm.hide();
+		$("#loginFormUser").keydown(function(e) {
+				me.on_loginForm_keyDown(e);
+			});
+		$("#loginFormPass").keydown(function(e){
+				me.on_loginForm_keyDown(e);
+			});
 		this.queryCheck = /^[a-z0-9 ]*$/;
 		this.queryReplace = /[^a-z0-9 ]/g;
 		this.focus_queryField();
@@ -202,6 +214,7 @@ function Main() {
 			got += 1;
 			var i = this.results_offset;
 			var m = this.media['_'+this.qc[cq][i][0]];
+			$(tr).data('key', this.qc[cq][i][0]);
 			var tr = _tr([m[0], m[1]]);
 			$('td:eq(0)',tr).addClass('artist');
 			$('td:eq(1)',tr).addClass('title');
@@ -209,12 +222,11 @@ function Main() {
 					$("#queryField").val("");
 					me.check_queryField();
 					$("#queryField").focus();
-					me.fetch_requests();
+					me.request_media($(this).data('key'));
 				});
 			t.append(tr);
 			if(got == 10) break;
 		}
-
 	};
 
 	this.fill_requestsTable = function() {
@@ -246,7 +258,39 @@ function Main() {
 			t.append(tr);
 		}
 	};
-	
+
+	this.show_loginForm = function() {
+		var me =this;
+		setTimeout(function() {
+			$.blockUI({message: me.loginForm });
+		}, 1000);
+	};
+
+	this.request_media = function(key) {
+		this.pendingRequest = key;
+		var me = this;
+		if(readCookie('user') == null ||
+		   readCookie('pass') == null) {
+			this.show_loginForm();
+			return;
+		}
+		$.get("/request/"+readCookie('user') + "/" +
+				  readCookie('pass') + "/" +
+				  key.toString(), function (doc) {
+				me.on_requested_media(doc);
+			});
+	};
+
+	this.on_requested_media = function(doc) {
+		var code = $(doc.firstChild).attr('code');
+		if(code == 'wrong-login') {
+			this.show_loginForm();
+			return;
+		} else if (code == 'ok') {
+			this.fetch_requests();
+		}
+	};
+
 	this.check_queryField = function(e) {
 		var me = this;
 		var q = $("#queryField").val();
