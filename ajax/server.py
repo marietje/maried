@@ -70,7 +70,7 @@ class AjaxServerHandler(BaseHTTPRequestHandler):
 
 	def _respond_to_request(self, code):
 		self.send_response(200)
-		self.send_header('Content-type', 'text/plain')
+		self.send_header('Content-type', 'text/xml')
 		self.end_headers()
 		doc = Document()
 		n_stat = doc.createElement('status')
