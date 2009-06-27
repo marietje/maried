@@ -64,11 +64,11 @@ class AjaxServerHandler(BaseHTTPRequestHandler):
 			return self._respond_to_request('wrong-login')
 		try:
 			self.server.desk.request_media(media, user)
-		except Denied:
-			return self._respond_to_request('denied')
+		except Denied, e:
+			return self._respond_to_request('denied', str(e))
 		self._respond_to_request('ok')
 
-	def _respond_to_request(self, code):
+	def _respond_to_request(self, code, message=None):
 		self.send_response(200)
 		self.send_header('Content-type', 'text/xml')
 		self.end_headers()
@@ -76,6 +76,8 @@ class AjaxServerHandler(BaseHTTPRequestHandler):
 		n_stat = doc.createElement('status')
 		doc.appendChild(n_stat)
 		n_stat.setAttribute('code', code)
+		if not message is None:
+			n_stat.setAttribute('message', message)
 		self.wfile.write(doc.toprettyxml(indent="  "))
 		
 	def do_requests(self):
