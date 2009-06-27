@@ -115,10 +115,11 @@ class ClassicRequest(Request, ClassicBaseRequest):
 						     repr(self.media))
 
 class ClassicUser(User):
-	def __init__(self, coll, key, realName, level):
+	def __init__(self, coll, key, realName, level, passwordHash):
 		super(ClassicUser, self).__init__(key, realName)
 		self.level = level
 		self.coll = coll
+		self.passwordHash = passwordHash
 	@property
 	def key(self):
 		return self._key
@@ -134,6 +135,8 @@ class ClassicUser(User):
 	@property
 	def may_move(self):
 		return self.level >= 3
+	def check_password(self, password):
+		return self.passwordHash == hashlib.md5(password).hexdigest()
 
 class ClassicUsers(Users):
 	def assert_request(self, user, media):
@@ -845,10 +848,10 @@ class ClassicDb(Module):
 	def list_users(self, cursor=None):
 		c = self.cursor() if cursor is None else cursor
 		c.execute("""
-			SELECT username, fullName, level
+			SELECT username, fullName, level, password
 			FROM users; """)
-		for username, fullName, level in c.fetchall():
-			yield username, fullName, level
+		for username, fullName, level, passwordHash in c.fetchall():
+			yield username, fullName, level, passwordHash
 		if not cursor is None: cursor.close()
 
 	def list_media(self, cursor=None):
