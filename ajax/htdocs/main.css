@@ -2,6 +2,15 @@ body {
 	font-family: Baskerville, georgia, serif;
 }
 
+#footer {
+	text-align: center;
+	font-style: italic;
+	font-size: smaller;
+	color: gray;
+	border-top: 1px solid white;
+	padding-top: 1em;
+}
+
 #resultsTable,
 #requestsTable {
 	width: 100%;
