@@ -210,7 +210,6 @@ function Main() {
 			return;
 		this.do_query();
 		var got = 0;
-		this.results_offset++;
 		for(; this.results_offset < this.qc[cq].length; this.results_offset++) {
 			got += 1;
 			var i = this.results_offset;
@@ -228,6 +227,7 @@ function Main() {
 			t.append(tr);
 			if(got == 10) break;
 		}
+		this.results_offset++;
 	};
 
 	this.fill_requestsTable = function() {
