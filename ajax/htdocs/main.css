@@ -17,6 +17,14 @@ body {
 	table-layout: fixed;
 }
 
+#resultsTable {
+	border-collapse: collapse;
+}
+#resultsTable td {
+	padding-top: 2px;
+	padding-bottom: 2px;
+}
+
 #resultsTable tr:hover {
 	background-color: yellow;
 }
