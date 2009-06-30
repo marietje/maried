@@ -94,12 +94,24 @@ function Main() {
 			$.unblockUI();
 			createCookie('user', $('#loginFormUser').val());
 			createCookie('pass', $('#loginFormPass').val());
-			this.request_media(this.pendingRequest);
+			this.raise('new_credentials');
 		}
+	};
+	this.raise = function(ev) {
+		for (var i = 0; i < this.handlers[ev].length; i++) {
+			this.handlers[ev][i]();
+		}
+		this.handlers[ev] = [];
+	};
+	this.catch_once = function(ev, h) {
+		this.handlers[ev][this.handlers[ev].length] = function() {
+			h();
+		};
 	};
 	this.run = function() {
 		var me = this;
 		$.blockUI.defaults.applyPlatformOpacityRules = false;
+		this.handlers = {new_credentials: []};
 		this.loginForm = $('#loginForm');
 		this.loginForm.hide();
 		$("#loginFormUser").keydown(function(e) {
@@ -268,10 +280,12 @@ function Main() {
 	};
 
 	this.request_media = function(key) {
-		this.pendingRequest = key;
 		var me = this;
 		if(readCookie('user') == null ||
 		   readCookie('pass') == null) {
+			this.catch_once('new_credentials', function() {
+				me.request_media(key);
+			});
 			this.show_loginForm();
 			return;
 		}
