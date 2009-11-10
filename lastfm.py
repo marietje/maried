@@ -9,11 +9,11 @@ class Scrobbler(Module):
 		self.desk.on_playing_changed.register(self._on_playing_changed)
 		self.cond = threading.Condition()
 		self.running = True
-		scrobbler.login(self.username, self.password, hashpw=True)
 	def _on_playing_changed(self):
 		with self.cond:
 			self.cond.notify()
 	def scrobble(self, media):
+		scrobbler.login(self.username, self.password, hashpw=True)
 		scrobbler.submit(media.artist, media.title, int(time.time()),
 				length=int(media.length))
 		scrobbler.flush()

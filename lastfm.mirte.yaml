@@ -12,5 +12,4 @@ instances:
   scrobbler:
     module: scrobbler
     username: marietje-zuid
-    password: lVEldo6m40
     desk: desk
