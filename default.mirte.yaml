@@ -3,3 +3,4 @@ includes:
   - gstreamer.mirte.yaml
   - shell.mirte.yaml
   - ajax/ajax.mirte.yaml
+  - lastfm.mirte.yaml

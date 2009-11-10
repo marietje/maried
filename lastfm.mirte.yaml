@@ -1,0 +1,16 @@
+includes:
+  - core.mirte.yaml
+definitions:
+  scrobbler:
+    run: true
+    implementedBy: maried.lastfm.Scrobbler
+    settings:
+      desk: {type: desk}
+      username: {type: str}
+      password: {type: str}
+instances:
+  scrobbler:
+    module: scrobbler
+    username: marietje-zuid
+    password: lVEldo6m40
+    desk: desk
