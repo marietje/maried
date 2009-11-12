@@ -31,6 +31,9 @@ class Scrobbler(Module):
 	def scrobble(self, media):
 		if not self.authenticated:
 			return
+		if media.length <= 30:
+			self.l.info("%s is too short to be scrobbled")
+			return
 		scrobbler.submit(media.artist, media.title, int(time.time()),
 				length=int(media.length))
 		scrobbler.flush()
