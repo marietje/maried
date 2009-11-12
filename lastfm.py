@@ -7,13 +7,30 @@ class Scrobbler(Module):
 	def __init__(self, settings, logger):
 		super(Scrobbler, self).__init__(settings, logger)
 		self.desk.on_playing_changed.register(self._on_playing_changed)
+		self.register_on_setting_changed('username', self.osc_creds)
+		self.register_on_setting_changed('password', self.osc_creds)
 		self.cond = threading.Condition()
 		self.running = True
+		self.authenticated = False
+	def osc_creds(self):
+		if (not hasattr(self, 'username') or
+				not hasattr(self, 'password')):
+			return
+		try:
+			scrobbler.login(self.username,
+					self.password, hashpw=True)
+		except scrobbler.AuthError:
+			self.l.error('Couldn\'t authenticate with last.fm')
+			self.authenticated = False
+			return
+		self.authenticated = True
+
 	def _on_playing_changed(self):
 		with self.cond:
 			self.cond.notify()
 	def scrobble(self, media):
-		scrobbler.login(self.username, self.password, hashpw=True)
+		if not self.authenticated:
+			return
 		scrobbler.submit(media.artist, media.title, int(time.time()),
 				length=int(media.length))
 		scrobbler.flush()
