@@ -27,8 +27,17 @@ class Scheduler(Module):
 		self.gap = 0.0
 		# estimated oversleep on time.sleep
 		self.delay = 0.0
+	
+	def _calibrate(self, staged_at):
+		diff = time.time() - staged_at
+		if abs(diff) < self.calibration_goal:
+			return
+		self.l.info('Calibration diff: %s' % diff)
+		next = time.time() + self.calibration_delay
+		self.plan(next, self._calibrate, next)
 
 	def run(self):
+		self._calibrate(time.time())
 		while self.running:
 			if len(self.queue) == 0:
 				timeout = None
@@ -52,7 +61,7 @@ class Scheduler(Module):
 		tosleep = event.time - time.time() - self.delay
 		if tosleep > 0:
 			time.sleep(tosleep)
-		self.delay = 0.8 * self.delay + 
+		self.delay = 0.8 * self.delay + \
 			     0.2 * (time.time() - event.time + self.delay)
 		event.action()
 

@@ -6,7 +6,11 @@ definitions:
     run: true
     settings:
         threadPool: {type: threadPool}
+        calibration_delay: {type: float}
+        calibration_goal: {type: float}
 instances:
   scheduler:
     module: scheduler
     threadPool: threadPool
+    calibration_delay: 0.1
+    calibration_goal: 0.00001
