@@ -27,6 +27,7 @@ class Scheduler(Module):
 		self.gap = 0.0
 		# estimated oversleep on time.sleep
 		self.delay = 0.0
+		self.lock = threading.Lock()
 	
 	def _calibrate(self, staged_at):
 		diff = time.time() - staged_at
@@ -38,6 +39,7 @@ class Scheduler(Module):
 
 	def run(self):
 		self._calibrate(time.time())
+		self.lock.acquire()
 		while self.running:
 			if len(self.queue) == 0:
 				timeout = None
@@ -48,10 +50,13 @@ class Scheduler(Module):
 					event = heappop(self.queue)
 					self._stage(event)
 					continue
+			self.lock.release()
 			rl, wl, xl = select.select([self.sp[1]], [], [],
 					timeout)
 			if self.sp[1] in rl:
 				self.sp[1].recv(4096)
+			self.lock.acquire()
+		self.lock.release()
 	
 	def _stage(self, event):
 		self.threadPool.execute(self._sleep_for, event, time.time())
@@ -68,12 +73,14 @@ class Scheduler(Module):
 	def plan(self, time, func, *args, **kwargs):
 		def action():
 			func(*args, **kwargs)
-		heappush(self.queue, Scheduler.Entry(time, action))
+		with self.lock:
+			heappush(self.queue, Scheduler.Entry(time, action))
 		self._wake()
 	
 	def _wake(self):
 		self.sp[0].send('!')
 	
 	def stop(self):
-		self.running = False
+		with self.lock:
+			self.running = False
 		self._wake()
