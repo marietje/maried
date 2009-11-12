@@ -1,0 +1,12 @@
+includes:
+  - threadPool.mirte.yaml
+definitions:
+  scheduler:
+    implementedBy: maried.scheduler.Scheduler
+    run: true
+    settings:
+        threadPool: {type: threadPool}
+instances:
+  scheduler:
+    module: scheduler
+    threadPool: threadPool
