@@ -80,8 +80,8 @@ class Desk(Module):
 				self._on_playing_changed)
 		self.collection.on_changed.register(
 				self._on_collection_changed)
-	def _on_playing_changed(self):
-		self.on_playing_changed()
+	def _on_playing_changed(self, previous_playing):
+		self.on_playing_changed(previous_playing)
 	def _on_collection_changed(self):
 		self.on_media_changed()
 	def list_media(self):
@@ -250,6 +250,9 @@ class Orchestrator(Module):
 		self.running = True
 		while self.running:
 			self.lock.acquire()
+			previous_playing = (self.playing_media,
+					    self.satisfied_request,
+					    self.player.endTime)
 			try:
 				if not self.running: break
 				req = None
@@ -271,7 +274,7 @@ class Orchestrator(Module):
 			finally:
 				self.lock.release()
 			startTime = datetime.datetime.now()
-			self.on_playing_changed()
+			self.on_playing_changed(previous_playing)
 			try:
 				self.player.play(media)
 			except Stopped:

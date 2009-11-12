@@ -452,7 +452,7 @@ class ClassicScreen(Module):
 		self.desk.on_playing_changed.register(self._on_playing_changed)
 		self.cond = threading.Condition()
 		self.running = True
-	def _on_playing_changed(self):
+	def _on_playing_changed(self, previous_playing):
 		with self.cond:
 			self.cond.notify()
 	def run(self):
