@@ -12,6 +12,7 @@ class Scrobbler(Module):
 		self.cond = threading.Condition()
 		self.running = True
 		self.authenticated = False
+		self.queue = list()
 	def osc_creds(self):
 		if (not hasattr(self, 'username') or
 				not hasattr(self, 'password')):
@@ -25,27 +26,42 @@ class Scrobbler(Module):
 			return
 		self.authenticated = True
 
-	def _on_playing_changed(self):
+	def _on_playing_changed(self, previous_playing):
 		with self.cond:
+			self.queue.append(previous_playing)
 			self.cond.notify()
-	def scrobble(self, media):
+	def scrobble(self, media, end_time):
 		if not self.authenticated:
 			return
 		if media.length <= 30:
-			self.l.info("%s is too short to be scrobbled")
+			self.l.info("%s is too short to be scrobbled" % media)
 			return
-		scrobbler.submit(media.artist, media.title, int(time.time()),
-				length=int(media.length))
+		time_played = (media.length + time.time() -
+				time.mktime(end_time.timetuple()))
+		if time_played < 240 and time_played < media.length * 0.5:
+			self.l.info("%s has not played long enough" % media)
+			return
+		scrobbler.submit(media.artist, media.title,
+			int(time.mktime(end_time.timetuple()) - media.length),
+			length=int(media.length))
 		scrobbler.flush()
 	def run(self):
-		while True:
-			m, r, tmp = self.desk.get_playing()
-			if not r is None:
-				self.scrobble(m)
-			with self.cond:
-				if not self.running: break
-				self.cond.wait()
-				if not self.running: break
+		self.cond.acquire()
+		while self.running:
+			playing = self.desk.get_playing()[0]
+			scrobbler.now_playing(playing.artist,
+					      playing.title,
+					      length=int(playing.length))
+			while len(self.queue) > 0:
+				m, r, end_time = self.queue.pop()
+				if not r is None:
+					self.cond.release()
+					self.scrobble(m, end_time)
+					self.cond.acquire()
+			if not self.running:
+				break
+			self.cond.wait()
+		self.cond.release()
 	def stop(self):
 		self.running = False
 		with self.cond:
