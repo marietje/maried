@@ -1,4 +1,5 @@
 from core import Module
+from urllib2 import URLError
 import threading
 import scrobbler
 import time
@@ -49,14 +50,23 @@ class Scrobbler(Module):
 		self.cond.acquire()
 		while self.running:
 			playing = self.desk.get_playing()[0]
-			scrobbler.now_playing(playing.artist,
-					      playing.title,
-					      length=int(playing.length))
+			self.cond.release()
+			try:
+				scrobbler.now_playing(playing.artist,
+						      playing.title,
+						      length=int(playing.length))
+			except URLError as e:
+				self.l.exception("Error while scrobbler.now_playing")
+			self.cond.acquire()
 			while len(self.queue) > 0:
 				m, r, end_time = self.queue.pop()
 				if not r is None:
 					self.cond.release()
-					self.scrobble(m, end_time)
+					try:
+						self.scrobble(m, end_time)
+					except URLError as e:
+						self.l.exception("Error "+
+							"while scrobbler.submit")
 					self.cond.acquire()
 			if not self.running:
 				break
