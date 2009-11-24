@@ -140,6 +140,8 @@ class ClassicUser(User):
 
 class ClassicUsers(Users):
 	def assert_request(self, user, media):
+		if not user.has_access:
+			raise Denied
 		requests = self.queue.requests
 		if any(map(lambda x: x.media == media, requests)):
 			raise AlreadyInQueueError
