@@ -1,5 +1,5 @@
 includes:
-  - threadPool.mirte.yaml
+  - threadPool.mirte
 definitions:
   shellServer:
     implementedBy: maried.shell.ShellServer
@@ -8,9 +8,3 @@ definitions:
       threadPool: {type: threadPool}
       manager: {type: manager}
     run: True
-instances:
-  shellServer:
-    module: shellServer
-    socketPath: maried.socket
-    threadPool: threadPool
-    manager: manager

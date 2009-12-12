@@ -1,0 +1,7 @@
+definitions:
+  threadPool:
+    implementedBy: maried.threadPool.ThreadPool
+    settings:
+      minFree: {type: int, default: 3}
+      maxFree: {type: int, default: 8}
+    run: true

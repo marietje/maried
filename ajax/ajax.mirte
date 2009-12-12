@@ -1,0 +1,12 @@
+includes:
+  - ../threadPool.mirte
+  - ../core.mirte
+definitions:
+  ajaxServer:
+    implementedBy: maried.ajax.AjaxServer
+    settings:
+      host: {type: str, default: 0.0.0.0}
+      port: {type: int, default: 8080}
+      threadPool: {type: threadPool}
+      desk: {type: classicDesk}
+    run: True

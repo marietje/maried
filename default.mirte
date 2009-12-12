@@ -1,0 +1,6 @@
+includes:
+  - classic.mirte
+  - gstreamer.mirte
+  - shell.mirte
+  - ajax/ajax.mirte
+  - lastfm.mirte

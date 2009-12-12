@@ -1,6 +1,6 @@
 includes:
-  - threadPool.mirte.yaml
-  - core.mirte.yaml
+  - threadPool.mirte
+  - core.mirte
 definitions:
   classicCollection:
     implementedBy: maried.classic.ClassicCollection
@@ -10,10 +10,10 @@ definitions:
   classicDb:
     implementedBy: maried.classic.ClassicDb
     settings:
-      host: {type: str}
-      username: {type: str}
+      host: {type: str, default: localhost}
+      username: {type: str, default: marietjed}
       password: {type: str}
-      database: {type: str}
+      database: {type: str, default: marietjed}
   classicDesk:
     implementedBy: maried.classic.ClassicDesk
     inherits: [desk]
@@ -54,86 +54,19 @@ definitions:
     implementedBy: maried.classic.ClassicRequestServer
     inherits: [requestServer]
     settings:
-      host: { type: str }
-      port: { type: int }
+      host: { type: str, defualt: 0.0.0.0 }
+      port: { type: int, default: 1337 }
       threadPool: { type: threadPool }
   classicScreen:
     implementedBy: maried.classic.ClassicScreen
     inherits: [screen]
     settings:
-      bannerFile: {type: str}
+      bannerFile: {type: str, default: /tmp/banner}
   classicUsers:
     implementedBy: maried.classic.ClassicUsers
     inherits: [users]
     settings:
-      maxQueueLength: {type: int}
-      maxQueueCount: {type: int}
+      maxQueueLength: {type: int, default: 2700}
+      maxQueueCount: {type: int, default: 15}
       collection: {type: classicCollection}
       queue: {type: classicQueue}
-instances:
-  classicDb:
-    module: classicDb
-    username: marietjed
-    host: localhost
-    database: marietjed
-  collection:
-    module: classicCollection
-    db: classicDb
-    mediaStore: mediaStore
-  desk:
-    module: classicDesk
-    collection: collection
-    mediaStore: mediaStore
-    orchestrator: orchestrator
-    queue: amalgamatedQueue
-    users: users
-  history:
-    module: classicHistory
-    db: classicDb
-    collection: collection
-  mediaInfo:
-    module: classicMediaInfo
-  mediaStore:
-    module: classicMediaStore
-    mediaInfo: mediaInfo
-    threadPool: threadPool
-  orchestrator:
-    module: classicOrchestrator
-    history: history
-    player: player
-    queue: queue
-    randomQueue: randomQueue
-  randomQueue:
-    module: randomQueue
-    random: random
-    length: 5
-  player:
-    module: classicPlayer
-  amalgamatedQueue:
-    module: amalgamatedQueue
-    first: queue
-    second: randomQueue
-  queue:
-    module: classicQueue
-    db: classicDb
-    collection: collection
-  random:
-    module: classicRandom
-    collection: collection
-    history: history
-  requestServer:
-    module: classicRequestServer
-    desk: desk
-    host: 0.0.0.0
-    port: 1337
-    threadPool: threadPool
-  screen:
-    module: classicScreen
-    desk: desk
-    bannerFile: /tmp/banner
-  users:
-    module: classicUsers
-    collection: collection
-    queue: queue
-    maxQueueLength: 2700
-    maxQueueCount: 15

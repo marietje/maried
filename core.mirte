@@ -48,7 +48,7 @@ definitions:
     inherits: [ queue ]
     implementedBy: maried.core.RandomQueue
     settings:
-      length: {type: int}
+      length: {type: int, default: 5}
       random: {type: random}
   random:
     implementedBy: maried.core.Random
@@ -68,4 +68,3 @@ definitions:
       desk: {type: desk}
   users:
     implementedBy: maried.core.Users
-
