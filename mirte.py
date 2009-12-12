@@ -104,13 +104,23 @@ class InstanceInfo(object):
 		self.object = obj
 		self.module = module
 
+class VSettingDefinition(object):
+	def __init__(self, default=None, _type=None):
+		self.default = default
+		self.type = _type
+
+class DepDefinition(object):
+	def __init__(self, _type=None):
+		self.type = _type
+
 class ModuleDefinition(object):
-	def __init__(self):
-		self.deps = dict()
-		self.vsettings = dict()
-		self.implementedBy = None
-		self.run = False
-		self.inherits = list()
+	def __init__(self, deps=None, vsettings=None, implementedBy=None,
+			run=False, inherits=None):
+		self.deps = dict() if deps is None else deps
+		self.vsettings = dict() if vsettings is None else vsettings
+		self.implementedBy = implementedBy
+		self.run = run
+		self.inherits = inherits if inherits is None else list()
 
 class Manager(Module):
 	def __init__(self, logger=None):
@@ -222,13 +232,14 @@ class Manager(Module):
 						raw_value
 			vii = self.insts[raw_value]
 			vmo = self.modules[vii.module]
-			if not (mo.deps[key] in vmo.inherits or
-					mo.deps[key] == vii.module):
+			if not (mo.deps[key].type in vmo.inherits or
+					mo.deps[key].type == vii.module):
 				raise ValueError, "%s isn't a %s" % (
-						raw_value, mo.deps[key])
+						raw_value, mo.deps[key].type)
 			value = vii.object
 		elif key in mo.vsettings:
-			value = self.valueTypes[mo.vsettings[key]](raw_value)
+			value = self.valueTypes[mo.vsettings[key].type](
+					raw_value)
 		else:
 			raise ValueError, "No such settings %s" % key
 		self.l.info("Changing %s.%s to %s" % (instance_name,
@@ -243,7 +254,8 @@ def depsOf_of_mirteFile_instance_definition(man, insts):
 	    dictionary of instance definitions from a mirteFile """
 	return lambda x: map(lambda a: a[1],
 			     filter(lambda b: b[0] in \
-				man.modules[insts[x]['module']].deps,
+				[d.type for d in 
+					man.modules[insts[x]['module']].deps],
 				insts[x].items()))
 
 def depsOf_of_mirteFile_module_definition(defs):
@@ -278,9 +290,10 @@ def module_definition_from_mirteFile_dict(man, d):
 		m.inherits = set(['module'])
 	for k, v in d['settings'].iteritems():
 		if v['type'] in man.modules:
-			m.deps[k] = v['type']
+			m.deps[k] = DepDefinition(v['type'])
 		elif v['type'] in man.valueTypes:
-			m.vsettings[k] = v['type']
+			m.vsettings[k] = VSettingDefinition(v['type'],
+				v['default'] if 'default' in v else None)
 		else:
 			raise ValueError, \
 				"No such module or valuetype %s" % v
