@@ -121,6 +121,10 @@ class ModuleDefinition(object):
 		self.implementedBy = implementedBy
 		self.run = run
 		self.inherits = inherits if inherits is None else list()
+	
+	@property
+	def abstract(self):
+		return self.implementedBy is None
 
 class Manager(Module):
 	def __init__(self, logger=None):
