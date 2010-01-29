@@ -91,7 +91,10 @@ class AjaxServerHandler(BaseHTTPRequestHandler):
 			n_req = doc.createElement('request')
 			if not request.by is None:
 				n_req.setAttribute('by', str(request.by.key))
-			n_req.setAttribute('media', str(request.media.key))
+			n_req.setAttribute('media',  str(request.media.key))
+			n_req.setAttribute('artist', str(request.media.artist))
+			n_req.setAttribute('title',  str(request.media.title))
+			n_req.setAttribute('length', str(request.media.length))
 			n_reqs.appendChild(n_req)
 		self.wfile.write(doc.toprettyxml(indent="  "))
 	def do_media(self):
@@ -116,6 +119,9 @@ class AjaxServerHandler(BaseHTTPRequestHandler):
 		n_play.setAttribute('media', str(media.key))
 		if not req is None:
 			n_play.setAttribute('requestedBy', str(req.by.key))
+		n_play.setAttribute('artist', str(media.artist))
+		n_play.setAttribute('title',  str(media.title))
+		n_play.setAttribute('length', str(media.length))
 		n_play.setAttribute('endTime',
 				str(time.mktime(endTime.timetuple())))
 		n_play.setAttribute('serverTime',
