@@ -384,7 +384,10 @@ def execute_cmdLine_options(options, m, l):
 			if not bits[0] in opt_lut:
 				opt_lut[bits[0]] = list()
 			opt_lut[bits[0]].append((bits[1], v))
-	for k, v in inst_lut.iteritems():
+	inst_list = sort_by_successors(inst_lut.keys(),
+			lambda inst: [v for (k,v) in opt_lut.get(inst, ())
+					if k in m.modules[inst_lut[inst]].deps])
+	for k in reversed(tuple(inst_list)):
 		if k in m.insts:
 			raise NotImplementedError, \
 				"Overwriting instancens not yet supported"
@@ -392,7 +395,7 @@ def execute_cmdLine_options(options, m, l):
 		if k in opt_lut:
 			for k2, v2 in opt_lut[k]:
 				settings[k2] = v2
-		m.create_instance(k, v, settings)
+		m.create_instance(k, inst_lut[k], settings)
 	for k in opt_lut:
 		if k in inst_lut:
 			continue
