@@ -7,4 +7,4 @@ definitions:
     settings:
         threadPool: {type: threadPool}
         calibration_delay: {type: float, default: 0.1}
-        calibration_goal: {type: float, defaut: 0.00001}
+        calibration_goal: {type: float, default: 0.00001}
