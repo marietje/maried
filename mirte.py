@@ -264,8 +264,6 @@ class Manager(Module):
 								depName] = name
 				yield plan2
 		def execute(self):
-			print (self.insts_order, self.insts,
-				self.insts_implementing, self.targets)
 			for name in reversed(self.insts_order):
 				self.man.create_instance(*self.insts[name])
 
