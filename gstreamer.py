@@ -45,10 +45,21 @@ class GstMediaInfo(MediaInfo):
 				self.inError = True
 				self.finish()
 			elif t == gst.MESSAGE_EOS:
+				self.on_eos()
+
+		def on_eos(self):
+			raw = self.bin.query_position(
+					gst.FORMAT_TIME)[0]
+			try:
 				raw = self.bin.query_duration(
 						gst.FORMAT_TIME)[0]
-				self.result['length'] = raw / (1000.0**3)
-				self.finish()
+			except gst.QueryError:
+				self.mi.l.warn('query_duration failed, '+
+					'falling back to query_position')
+				raw = self.bin.query_position(
+						gst.FORMAT_TIME)[0]
+			self.result['length'] = raw / (1000.0**3)
+			self.finish()
 		
 		def on_tag(self, bus, message):
 			tagList = message.parse_tag()
