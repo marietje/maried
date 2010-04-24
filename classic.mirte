@@ -54,7 +54,7 @@ definitions:
     implementedBy: maried.classic.ClassicRequestServer
     inherits: [requestServer]
     settings:
-      host: { type: str, defualt: 0.0.0.0 }
+      host: { type: str, default: 0.0.0.0 }
       port: { type: int, default: 1337 }
       threadPool: { type: threadPool }
   classicScreen:
