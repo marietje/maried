@@ -65,5 +65,4 @@ definitions:
     run: true
     settings:
       desk: {type: desk}
-  users:
-    implementedBy: maried.core.Users
+  users: {}
