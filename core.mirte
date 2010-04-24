@@ -15,8 +15,7 @@ definitions:
       orchestrator: {type: orchestrator}
       queue: {type: queue}
       users: {type: users}
-  history:
-    implementedBy: maried.core.History
+  history: {}
   mediaInfo:
     implementedBy: maried.core.MediaInfo
   mediaStore:
