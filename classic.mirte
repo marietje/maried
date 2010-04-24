@@ -30,7 +30,7 @@ definitions:
     implementedBy: maried.classic.ClassicMediaStore
     inherits: [mediaStore]
     settings:
-      path: {type: str}
+      path: {type: str, default: media}
       threadPool: {type: threadPool}
   classicOrchestrator:
     implementedBy: maried.classic.ClassicOrchestrator
