@@ -180,14 +180,12 @@ class Manager(Module):
 	class GoCa_Plan(object):
 		""" A partial plan for a get_or_create_a call """
 		def __init__(self, man, targets, insts=None,
-				insts_implementing=None, insts_order=None):
+				insts_implementing=None):
 			self.man = man
 			self.targets = targets
 			self.insts = dict() if insts is None else insts
 			self.insts_implementing = (dict() if insts_implementing
 					is None else insts_implementing)
-			self.insts_order = (list() if insts_order is None
-						else insts_order)
 		def free_instance_name_like(self, name):
 			if (not name in self.insts and
 					not name in self.man.insts):
@@ -219,7 +217,6 @@ class Manager(Module):
 		def plan_a(self, mod):
 			name = self.free_instance_name_like(mod)
 			self.insts[name] = (name, mod, {})
-			self.insts_order.append(name)
 			md = self.man.modules[mod]
 			for mod2 in chain(md.inherits, (mod,)):
 				if not mod2 in self.insts_implementing:
@@ -248,8 +245,7 @@ class Manager(Module):
 					for k, v in choices_t]):
 				plan2 = Manager.GoCa_Plan(self.man, dict(),
 						dict(self.insts),
-						dict(self.insts_implementing),
-						list(self.insts_order))
+						dict(self.insts_implementing))
 				tmp = [(choices_t[n][0], choices_t[n][1][m])
 						for n, m in enumerate(choice)]
 				for target, inst_or_mod in tmp:
@@ -264,7 +260,12 @@ class Manager(Module):
 								depName] = name
 				yield plan2
 		def execute(self):
-			for name in reversed(self.insts_order):
+			insts = frozenset(self.insts.keys())
+			inst_list = tuple(sort_by_successors(insts,
+				lambda inst: [self.insts[inst][2][k] for k
+				in self.man.modules[self.insts[inst][1]].deps
+				if self.insts[inst][2][k] in insts]))
+			for name in reversed(inst_list):
 				self.man.create_instance(*self.insts[name])
 
 	def get_or_create_a(self, _type):
