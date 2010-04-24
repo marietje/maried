@@ -51,7 +51,6 @@ definitions:
       length: {type: int, default: 5}
       random: {type: random}
   random:
-    implementedBy: maried.core.Random
     run: true
     settings:
       collection: {type: collection}
