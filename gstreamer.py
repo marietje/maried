@@ -28,8 +28,16 @@ class GstMediaInfo(MediaInfo):
 					'playbin', 'playbin')
 			fakesink = gst.element_factory_make(
 					'fakesink', 'fakesink')
+			rganalysis = gst.element_factory_make(
+					'rganalysis', 'rganalysis')
+			bin2 = gst.element_factory_make('bin', 'bin')
+			bin2.add(rganalysis)
+			bin2.add(fakesink)
+			rganalysis.link(fakesink)
+			bin2.add_pad(gst.GhostPad('ghostpad',
+					rganalysis.get_static_pad('sink')))
 			self.bin.set_property('video-sink', fakesink)
-			self.bin.set_property('audio-sink', fakesink)
+			self.bin.set_property('audio-sink', bin2)
 			self.bus = bus = self.bin.get_bus()
 			bus.add_signal_watch()
 			bus.connect('message', self.on_message)
@@ -68,6 +76,10 @@ class GstMediaInfo(MediaInfo):
 					self.result[key] = tagList[key]
 				elif key == 'title':
 					self.result[key] = tagList[key]
+				elif key == gst.TAG_TRACK_PEAK:
+					self.result['track_peak'] = tagList[key]
+				elif key == gst.TAG_TRACK_GAIN:
+					self.result['track_gain'] = tagList[key]
 
 		def interrupt(self):
 			self.inError = True
