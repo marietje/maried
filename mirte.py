@@ -185,7 +185,7 @@ class Manager(Module):
 			self.targets = targets
 			self.insts = dict() if insts is None else insts
 			self.insts_implementing = (dict() if insts_implementing
-						is None else insts_implementing)
+					is None else insts_implementing)
 			self.insts_order = (list() if insts_order is None
 						else insts_order)
 		def free_instance_name_like(self, name):
