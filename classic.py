@@ -31,7 +31,8 @@ class MaxQueueCountExceededError(Denied):
 
 class ClassicMedia(Media):
 	def __init__(self, coll, key, artist, title, length, mediaFileKey,
-			   uploadedByKey, uploadedTimestamp):
+			   uploadedByKey, uploadedTimestamp, trackGain,
+			   trackPeak):
 		self.coll = coll
 		self._key = key
 		self.artist = artist
@@ -40,6 +41,8 @@ class ClassicMedia(Media):
 		self.mediaFileKey = mediaFileKey
 		self.uploadedByKey = uploadedByKey
 		self.uploadedTimestamp = uploadedTimestamp
+		self.trackGain = trackGain
+		self.trackPeak = trackPeak
 	
 	@property
 	def uploadedBy(self):
@@ -651,7 +654,9 @@ class ClassicCollection(Collection):
 		       info['length'],
 		       mediaFile.key,
 		       user,
-		       int(time.time()))
+		       int(time.time()),
+		       info.get('track_gain', None),
+		       info.get('track_peak', None))
 		key = self.db.add_media(*tmp)
 		with self.lock:
 			self._media[key] = ClassicMedia(self, key, *tmp)
@@ -674,7 +679,9 @@ class ClassicCollection(Collection):
 				     media.length,
 				     media.mediaFile.key,
 				     media.uploadedByKey,
-				     media.uploadedTimestamp)
+				     media.uploadedTimestamp,
+				     media.trackGain,
+				     media.trackPeak)
 		self.on_changed()
 	
 class ClassicRandom(Random):
@@ -860,13 +867,16 @@ class ClassicDb(Module):
 		c = self.cursor() if cursor is None else cursor
 		c.execute("""
 			SELECT trackId, artist, title, length, fileName,
-			       uploadedBy, uploadedTimestamp
+			       uploadedBy, uploadedTimestamp, trackGain,
+			       trackPeak
 			FROM tracks
 			WHERE deleted=0; """)
 		for (trackId, artist, title, length, fileName, uploadedBy,
-				uploadedTimestamp) in c.fetchall():
+				uploadedTimestamp, trackGain, trackPeak) \
+					in c.fetchall():
 			yield (trackId, artist, title, length, fileName,
-			       uploadedBy, uploadedTimestamp)
+			       uploadedBy, uploadedTimestamp, trackGain,
+			       trackPeak)
 		if not cursor is None: cursor.close()
 	
 	def remove_media(self, trackId, cursor=None):
@@ -878,7 +888,7 @@ class ClassicDb(Module):
 		if not cursor is None: cursor.close()
 
 	def add_media(self, artist, title, length, fileName, uploadedBy,
-			uploadedTimestamp, cursor=None):
+			uploadedTimestamp, trackGain, trackPeak, cursor=None):
 		c = self.cursor() if cursor is None else cursor
 		c.execute("""
 			INSERT INTO tracks (
@@ -887,16 +897,20 @@ class ClassicDb(Module):
 				length,
 				fileName,
 				uploadedBy,
-				uploadedTimestamp
+				uploadedTimestamp,
+				trackGain,
+				trackPeak
 			) VALUES (
-				%s, %s, %s, %s, %s, %s
+				%s, %s, %s, %s, %s, %s, %s, %s
 			); """,
 			(artist,
 			 title,
 			 length,
 			 fileName,
 			 uploadedBy,
-			 uploadedTimestamp))
+			 uploadedTimestamp,
+			 trackGain,
+			 trackPeak))
 		if not cursor is None: cursor.close()
 		c = self.cursor() if cursor is None else cursor
 		c.execute(""" SELECT trackId
@@ -907,7 +921,8 @@ class ClassicDb(Module):
 		return ret
 
 	def update_media(self, trackId, artist, title, length, fileName,
-			 uploadedBy, uploadedTimestamp, cursor=None):
+			 uploadedBy, uploadedTimestamp, trackGain, trackPeak,
+			 cursor=None):
 		c = self.cursor() if cursor is None else cursor
 		c.execute("""
 			UPDATE tracks
@@ -916,7 +931,9 @@ class ClassicDb(Module):
 			    length=%s,
 			    fileName=%s,
 			    uploadedBy=%s,
-			    uploadedTimestamp=%s
+			    uploadedTimestamp=%s,
+			    trackGain=%s,
+			    trackPeak=%s
 			WHERE trackId=%s; """,
 			(artist,
 			 title,
@@ -924,6 +941,8 @@ class ClassicDb(Module):
 			 fileName,
 			 uploadedBy,
 			 uploadedTimestamp,
+			 trackGain,
+			 trackPeak,
 			 trackId))
 		if not cursor is None: cursor.close()
 
