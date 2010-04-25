@@ -112,6 +112,24 @@ class GstPlayer(Player):
 	def __init__(self, settings, logger):
 		super(GstPlayer, self).__init__(settings, logger)
 		self.bin = gst.element_factory_make('playbin', 'playbin')
+		self.bin2 = gst.element_factory_make('bin', 'bin')
+		self.ac = gst.element_factory_make('audioconvert',
+				'audioconvert')
+		self.ac2 = gst.element_factory_make('audioconvert',
+				'audioconvert2')
+		self.rgvolume = gst.element_factory_make('rgvolume', 'rgvolume')
+		self.autoaudiosink = gst.element_factory_make('autoaudiosink',
+					'autoaudiosink')
+		self.bin2.add(self.rgvolume)
+		self.bin2.add(self.ac)
+		self.bin2.add(self.ac2)
+		self.bin2.add(self.autoaudiosink)
+		self.ac.link(self.rgvolume)
+		self.rgvolume.link(self.ac2)
+		self.ac2.link(self.autoaudiosink)
+		self.bin2.add_pad(gst.GhostPad('ghostpad',
+			self.ac.get_static_pad('sink')))
+		self.bin.set_property('audio-sink', self.bin2)
 		self.bus = self.bin.get_bus()
 		self.bus.add_signal_watch()
 		self.bus.connect('message', self.on_message)
@@ -149,6 +167,10 @@ class GstPlayer(Player):
 		self.bin.set_property('uri', 
 			"file:///"+mf.get_named_file())
 		self.bin.set_state(gst.STATE_PLAYING)
+		tl = gst.TagList()
+		tl[gst.TAG_TRACK_GAIN] = media.trackGain
+		tl[gst.TAG_TRACK_PEAK] = media.trackPeak
+		self.rg_event = gst.event_new_tag(tl)
 		with self.idleCond:
 			self.idleCond.wait()
 	
@@ -164,6 +186,20 @@ class GstPlayer(Player):
 			error, debug = message.parse_error()
 			self.l.error("Gst: %s %s" % (error, debug))
 			self._reset()
+		elif (message.type == gst.MESSAGE_STATE_CHANGED and
+			message.src == self.rgvolume and
+			message.parse_state_changed()[1] ==
+				gst.STATE_PLAYING and
+			not self.rg_event is None):
+				self.ac.get_static_pad('src').push_event(
+						self.rg_event)
+				self.rg_event = None
+				tg = self.rgvolume.get_property('target-gain')
+				rg = self.rgvolume.get_property('result-gain')
+				if tg != rg:
+					self.l.warn('replaygain: target gain '+
+						'not reached: trg %s res %s' % (
+							tg, rg))
 		elif message.type == gst.MESSAGE_EOS:
 			self._reset()
 	
