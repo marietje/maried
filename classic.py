@@ -511,7 +511,7 @@ class ClassicPlayer(Player):
 class ClassicMediaInfo(MediaInfo):
 	def get_info_by_path(self, path):
 		self.l.info("Info for %s" % path)
-		p = subprocess.Popen(['mp3info', path, '-p', '%a\\n%t\\n%S'],
+		p = subprocess.Popen(['mp3info', '-p', '%a\\n%t\\n%S', path],
 				     stdout=subprocess.PIPE)
 		artist, title, length = p.stdout.read().split("\n")
 		length = int(length)
