@@ -9,12 +9,12 @@ def sanitize_collection_info(collection, fix=False):
 					info['length'],
 					media.length, media)
 			if fix:
-				media.length = length
+				media.length = info['length']
 			ok = False
 		if (info['track_peak'], info['track_gain']) != (
 				media.trackPeak, media.trackGain):
 			print "wrong gain/peak: %s != %s for %s" % (
-				(info['track_peak'], info['track_gain']),
+				(info['track_gain'], info['track_peak']),
 				(media.trackPeak, media.trackGain), media)
 			if fix:
 				media.trackGain = info['track_gain']
