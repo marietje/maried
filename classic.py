@@ -408,6 +408,7 @@ class ClassicRequestServer(Module):
 		self.LAR_cond = threading.Condition()
 		self.LAR = None
 		self.LAR_count = 0
+		self._on_media_changed()
 		
 	def _inner_run(self):
 		rlist, wlist, xlist = select.select(
@@ -603,6 +604,7 @@ class ClassicCollection(Collection):
 	
 	def osc_db(self):
 		self.db.on_changed.register(self.on_db_changed)
+		self.on_db_changed()
 	
 	def on_db_changed(self):
 		if not self.db.ready:
