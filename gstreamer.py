@@ -166,11 +166,11 @@ class GstPlayer(Player):
 		self.l.info("Playing %s" % media)
 		self.bin.set_property('uri', 
 			"file:///"+mf.get_named_file())
-		self.bin.set_state(gst.STATE_PLAYING)
 		tl = gst.TagList()
 		tl[gst.TAG_TRACK_GAIN] = media.trackGain
 		tl[gst.TAG_TRACK_PEAK] = media.trackPeak
 		self.rg_event = gst.event_new_tag(tl)
+		self.bin.set_state(gst.STATE_PLAYING)
 		with self.idleCond:
 			self.idleCond.wait()
 	
@@ -186,20 +186,20 @@ class GstPlayer(Player):
 			error, debug = message.parse_error()
 			self.l.error("Gst: %s %s" % (error, debug))
 			self._reset()
-		elif (message.type == gst.MESSAGE_STATE_CHANGED and
-			message.src == self.rgvolume and
-			message.parse_state_changed()[1] ==
-				gst.STATE_PLAYING and
-			not self.rg_event is None):
-				self.ac.get_static_pad('src').push_event(
-						self.rg_event)
-				self.rg_event = None
-				tg = self.rgvolume.get_property('target-gain')
-				rg = self.rgvolume.get_property('result-gain')
-				if tg != rg:
-					self.l.warn('replaygain: target gain '+
-						'not reached: trg %s res %s' % (
-							tg, rg))
+		elif (not self.rg_event is None and
+				message.type == gst.MESSAGE_STATE_CHANGED and
+				message.src == self.rgvolume and
+				message.parse_state_changed()[1] ==
+					gst.STATE_PAUSED):
+			self.ac.get_static_pad('src').push_event(
+					self.rg_event)
+			self.rg_event = None
+			tg = self.rgvolume.get_property('target-gain')
+			rg = self.rgvolume.get_property('result-gain')
+			if tg != rg:
+				self.l.warn('replaygain: target gain '+
+					'not reached: trg %s res %s' % (
+						tg, rg))
 		elif message.type == gst.MESSAGE_EOS:
 			self._reset()
 	
