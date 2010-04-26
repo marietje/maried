@@ -14,6 +14,7 @@ class Scrobbler(Module):
 		self.running = True
 		self.authenticated = False
 		self.queue = list()
+		self.osc_creds()
 	def osc_creds(self):
 		if (not hasattr(self, 'username') or
 				not hasattr(self, 'password')):
