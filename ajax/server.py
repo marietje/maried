@@ -143,6 +143,7 @@ class AjaxServer(Module):
 				'htdocs')
 		if not os.path.exists(self.htdocs_path):
 			self.l.error("%s doens't exist!" % self.htdocs_path)
+		self.on_media_changed()
 	def on_media_changed(self):
 		self.threadPool.execute(self.do_refresh_MR)
 	def do_refresh_MR(self):
