@@ -152,6 +152,8 @@ class IntSocketFile(object):
 	def send(self, data):
 		self.write(data)
 		return len(data)
+	def close(self):
+		self.socket.close()
 
 	def interrupt(self):
 		self.running = False
