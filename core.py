@@ -421,6 +421,7 @@ class SocketServer(Module):
 		handler.handle()
 		with self.lock:
 			self.handlers.remove(handle)
+			self.handlers.remove(handler)
 		handler.cleanup()
 	def stop(self):
 		with self.lock:
