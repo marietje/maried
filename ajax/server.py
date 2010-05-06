@@ -1,15 +1,29 @@
-from maried.core import Module, Event, Denied
+from maried.core import Module, Event, Denied, TCPSocketServer
+from maried.io import IntSocketFile
+
 import threading
 import os.path
 import logging
 import maried
-import socket
-import select
 import time
 
 from cStringIO import StringIO
 from xml.dom.minidom import Document
 from BaseHTTPServer import BaseHTTPRequestHandler
+
+class AjaxServerHandlerWrapper(object):
+	def __init__(self, request, addr, server, l):
+		self.request = IntSocketFile(request)
+		self.addr = addr
+		self.server = server
+		self.l = l
+	def handle(self):
+		self.h = AjaxServerHandler(self.request, self.addr,
+					self.server, self.l)
+	def interrupt(self):
+		self.request.interrupt()
+	def cleanup(self):
+		self.request.close()
 
 class AjaxServerHandler(BaseHTTPRequestHandler):
 	def __init__(self, request, addr, server, l):
@@ -128,12 +142,9 @@ class AjaxServerHandler(BaseHTTPRequestHandler):
 				str(time.time()))
 		self.wfile.write(doc.toprettyxml(indent="  "))	
 
-class AjaxServer(Module):
+class AjaxServer(TCPSocketServer):
 	def __init__(self, settings, logger):
 		super(AjaxServer, self).__init__(settings, logger)
-		self.running = True
-		self._ssp = socket.socketpair()
-		self.n_conn = 0
 		self.MR = None
 		self.MR_cond = threading.Condition()
 		self.desk.on_media_changed.register(
@@ -167,40 +178,11 @@ class AjaxServer(Module):
 		with self.MR_cond:
 			self.MR = txt
 			self.MR_cond.notifyAll()
+	def create_handler(self, con, addr, logger):
+		return AjaxServerHandlerWrapper(con, addr, self, logger)
 
-	def run(self):
-		s = self.socket = socket.socket(socket.AF_INET,
-						socket.SOCK_STREAM)
-		s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-		try:
-			s.bind((self.host, self.port))
-			s.listen(3)
-			self._inner_run(s)
-		finally:
-			s.close()
-	def _inner_run(self, s):
-		while self.running:
-			rlist, wlist, xlist = select.select(
-					[self._ssp[1], s], [],
-					[self._ssp[1], s])
-			if (self._ssp[1] in rlist and
-			    not self.running):
-				break
-			if s in xlist:
-				self.l.error("select(2) says socket in error")
-				break
-			if not s in rlist:
-				continue
-			con, addr = s.accept()
-			self.n_conn += 1
-			self.threadPool.execute(self._handle_request,
-						con, addr, self.n_conn)
 	def _handle_request(self, conn, addr, n):
 		l = logging.getLogger("%s.%s" % (self.l.name, n))
 		l.debug("Accepted connection from %s" % repr(addr))
 		rh = AjaxServerHandler(conn, addr, self, l)
 		conn.close()
-
-	def stop(self):
-		self.running = False
-		self._ssp[0].send("Rise and shine!")
