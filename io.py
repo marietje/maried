@@ -55,6 +55,7 @@ class IntSocketFile(object):
 		self._sleep_socket_pair = socket.socketpair()
 		self.running = True
 		self.read_buffer = ''
+		self.closed = False
 	def write(self, v):
 		to_write = v
 		while self.running and len(to_write) > 0:
@@ -154,9 +155,11 @@ class IntSocketFile(object):
 		return len(data)
 	def close(self):
 		self.socket.close()
-
+		self.closed = True
 	def interrupt(self):
 		self.running = False
 		self._sleep_socket_pair[0].send('Good morning!')
 	def flush(self):
 		pass
+	def makefile(self, mode=None, bufsize=None):
+		return self
