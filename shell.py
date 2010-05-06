@@ -8,7 +8,7 @@ import os.path
 import logging
 import threading
 
-from maried.core import Module
+from maried.core import Module, UnixSocketServer
 from maried.io import IntSocketFile
 
 class HushFile(object):
@@ -27,7 +27,6 @@ class HushFile(object):
 	def readline(self):
 		try: return self.f.readline()
 		except: return ''
-
 
 class FileMux(object):
 	""" (Barely) wraps a file for writing and notifies handlers about
@@ -66,68 +65,23 @@ class SockConsole(code.InteractiveConsole):
 		if ret == '': raise IOError
 		return ret[:-1]
 	def on_std_write(self, v):
-		self.f.write(v)
+		try:
+			self.f.write(v)
+		except Exception:
+			pass
 	def cleanup(self):
 		sys.stdout.deregister(self.on_std_write)
 		sys.stderr.deregister(self.on_std_write)
 		logging.getLogger('').removeHandler(self.log_handler)
 	def interrupt(self):
 		self.f.interrupt()
+	def handle(self):
+		self.interact()
 
-class ShellServer(Module):
-	def __init__(self, settings, logger):
-		super(ShellServer, self).__init__(settings, logger)
-		self.running = False
-		self._sleep_socket_pair = socket.socketpair()
-		self.n_conn = 0
-		self.consoles = set()
-		self.lock = threading.Lock()
-	def run(self):
-		assert not self.running
-		self.running = True
-		if os.path.exists(self.socketPath):
-			os.unlink(self.socketPath)
-		s = self.socket = socket.socket(socket.AF_UNIX,
-						socket.SOCK_STREAM)
-		s.bind(self.socketPath)
-		s.listen(3)
-		while self.running:
-			rlist, wlist, xlist = select.select([s,
-				self._sleep_socket_pair[1]], [], [s])
-			if (self._sleep_socket_pair[1] in rlist and
-			    not self.running):
-				break
-			if s in xlist:
-				self.l.error("select(2) says socket in error")
-				break
-			if not s in rlist:
-				continue
-			con, addr = s.accept()
-			self.n_conn += 1
-			self.threadPool.execute(self._handle_request,
-						con, addr, self.n_conn)
-	def _handle_request(self, con, addr, n_conn):
-		l = logging.getLogger("%s.%s" % (self.l.name, n_conn))
-		l.info('Accepted connection from %s' % addr)
+class ShellServer(UnixSocketServer):
+	def create_handler(self, con, addr, logger):
 		locals = {'manager': self.manager}
 		for k, ii in self.manager.insts.iteritems():
 			locals[k] = ii.object
 		console = SockConsole(con, locals)
-		with self.lock:
-			self.consoles.add(console)
-		try:
-			console.interact()
-		except IOError:
-			l.warn("Console caught IOError")
-		finally:
-			with self.lock:
-				self.consoles.remove(console)
-			console.cleanup()
-
-	def stop(self):
-		self.running = False
-		self._sleep_socket_pair[0].send('good morning!')
-		with self.lock:
-			consoles = set(self.consoles)
-		for console in consoles:
-			console.interrupt()
+		return console
