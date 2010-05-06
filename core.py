@@ -420,7 +420,6 @@ class SocketServer(Module):
 			self.handlers.add(handler)
 		handler.handle()
 		with self.lock:
-			self.handlers.remove(handle)
 			self.handlers.remove(handler)
 		handler.cleanup()
 	def stop(self):
@@ -439,5 +438,13 @@ class UnixSocketServer(SocketServer):
 			os.unlink(self.socketPath)
 		s = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
 		s.bind(self.socketPath)
+		s.listen(3)
+		return s
+
+class TCPSocketServer(SocketServer):
+	def create_listening_socket(self):
+		s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+		s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+		s.bind((self.host, self.port))
 		s.listen(3)
 		return s

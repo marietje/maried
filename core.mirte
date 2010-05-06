@@ -76,3 +76,8 @@ definitions:
     inherits: [ socketServer ]
     settings:
       socketPath: { type: str }
+  tcpSocketServer:
+    inherits: [ socketServer ]
+    settings:
+      host: { type: str }
+      port: { type: str }
