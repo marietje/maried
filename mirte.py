@@ -8,6 +8,7 @@ import logging
 import os.path
 import socket
 import select
+import copy
 import yaml
 import sys
 import os
@@ -428,8 +429,8 @@ def depsOf_of_mirteFile_module_definition(defs):
 	""" Returns a function that returns the dependencies of a module
 	    definition by its name, where defs is a dictionary of module
 	    definitions from a mirteFile """
-	return lambda x: (filter(lambda z: z in defs,
-				 map(lambda y: y[1]['type'],
+	return lambda x: (filter(lambda z: not z is None and z in defs,
+				 map(lambda y: y[1].get('type'),
 			      	     defs[x]['settings'].items()
 				     	if 'settings' in defs[x] else []))) + \
 			 (defs[x]['inherits'] if 'inherits' in defs[x] else [])
@@ -455,6 +456,14 @@ def module_definition_from_mirteFile_dict(man, d):
 	if len(m.inherits) == 0:
 		m.inherits = set(['module'])
 	for k, v in d['settings'].iteritems():
+		if not 'type' in v:
+			if not k in m.vsettings:
+				raise ValueError, \
+					"No such existing vsetting %s" % k
+			if 'default' in v:
+				m.vsettings[k] = copy.copy(m.vsettings[k])
+				m.vsettings[k].default = v['default']
+			continue
 		if v['type'] in man.modules:
 			m.deps[k] = DepDefinition(v['type'])
 		elif v['type'] in man.valueTypes:
