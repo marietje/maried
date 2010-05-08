@@ -1,16 +1,15 @@
 from __future__ import with_statement
 
 from mirte.core import Module
-from sarah.event import Event
 from maried.core import *
+from sarah.event import Event
+from sarah.socketserver import TCPSocketServer
 from sarah.io import *
 
 import os
 import time
 import socket
-import select
 import random
-import select
 import os.path
 import MySQLdb
 import hashlib
@@ -230,38 +229,156 @@ class ClassicHistory(History):
 class ClassicDesk(Desk):
 	pass
 
-class ClassicRequestServer(Module):
-	def _handle_list_queue(self, conn, addr, l, f, cmd):
-		queue = self.desk.list_requests()
-		endTime = self.desk.get_playing()[2]
-		timeLeft = (0 if endTime is None else
-			int(time.mktime(endTime.timetuple()) -
-			time.mktime(datetime.datetime.now().timetuple())))
-		f.write("TOTAL::%s::TIMELEFT::%s\n" % (len(queue),
-						       int(timeLeft)))
-		wf = BufferedFile(f)
-		for req in queue:
-			media = req.media
-			byKey = ('marietje' if req.by is None
-					    else req.by.key)
-			wf.write("SONG::%s::%s::%s::%s\n" % (media.artist,
-							     media.title,
-							     media.length,
-							     byKey))
-		wf.flush()
+class ClassicRequestServer(TCPSocketServer):
+	class Handler(object):
+		def __init__(self, server, conn, addr, logger):
+			self.server = server
+			self.f = IntSocketFile(conn)
+			self.addr = addr
+			self.l = logger
+			self.cmd_map = {
+				'LIST::QUEUE': self.handle_list_queue,
+				'LIST::NOWPLAYING': self.handle_nowplaying,
+				'LIST::ALL': self.handle_list_all,
+				'LIST::PLAYLISTS::USER::': self.handle_list_pls,
+				'REQUEST::SONG::': self.handle_request_song,
+				'REQUEST::UPLOAD::': self.handle_request_upload,
+				'LOGIN::USER::': self.handle_login_user}
 
-	def _handle_nowplaying(self, conn, addr, l, f, cmd):
-		media, request, endTime = self.desk.get_playing()
-		if (media is None or endTime is None):
-			self.l.warn("Not properly playing, yet")
-			return
-		endTimeTS = int(time.mktime(endTime.timetuple()) - media.length)
-		timeTS = int(time.mktime(datetime.datetime.now().timetuple()))
-		f.write( "ID::%s::Timestamp::%s::Length::%s::Time::%s\n" % (
-				media.key,
-				endTimeTS,
-				media.length,
-				timeTS))
+		def cleanup(self):
+			self.f.close()
+
+		def handle_list_queue(self, cmd):
+			queue = self.server.desk.list_requests()
+			endTime = self.server.desk.get_playing()[2]
+			timeLeft = (0 if endTime is None else
+				int(time.mktime(endTime.timetuple()) -
+				time.mktime(datetime.datetime.now(
+					).timetuple())))
+			self.f.write("TOTAL::%s::TIMELEFT::%s\n" % (len(queue),
+							       int(timeLeft)))
+			wf = BufferedFile(self.f)
+			for req in queue:
+				media = req.media
+				byKey = ('marietje' if req.by is None
+						    else req.by.key)
+				wf.write("SONG::%s::%s::%s::%s\n" % (
+					media.artist, media.title,
+					media.length, byKey))
+			wf.flush()
+
+		def handle_nowplaying(self, cmd):
+			media, request, endTime = self.server.desk.get_playing()
+			if (media is None or endTime is None):
+				self.l.warn("Not properly playing, yet")
+				return
+			endTimeTS = int(time.mktime(endTime.timetuple()) -
+					media.length)
+			timeTS = int(time.mktime(
+				datetime.datetime.now().timetuple()))
+			self.f.write(("ID::%s::Timestamp::%s::Length::"+
+					"%s::Time::%s\n")
+					% (media.key, endTimeTS, media.length,
+						timeTS))
+
+		def handle_list_all(self, cmd):
+			with self.server.LAR_cond:
+				if self.server.LAR is None:
+					self.l.warn("Waiting for LIST::ALL "+
+							"response cache")
+					self.server.LAR_cond.wait()
+				LAR_count = self.server.LAR_count
+				LAR = self.server.LAR
+			self.f.write("TOTAL::%s\n" % LAR_count)
+			self.f.write(LAR)
+
+		def handle_login_user(self, cmd):
+			key = cmd.strip().split('::', 2)[-1]
+			try:
+				user = self.server.desk.user_by_key(key)
+			except KeyError:
+				self.f.write("User doesn't exist\n")
+				self.l.warn("User doesn't exist %s" % key)
+				return
+			if not user.has_access:
+				self.f.write("Access denied\n")
+				self.l.warn("User hasn't got access %s" % user)
+				return
+			self.f.write("LOGIN::SUCCESS\n")
+
+		def handle_request_song(self, cmd):
+			bits = cmd.strip().split('::')
+			if len(bits) != 5:
+				self.f.write("Wrong number of arguments\n")
+				self.l.warn("Wrong number of arguments %s"
+						% repr(cmd))
+				return
+			songKey = int(bits[2])
+			userKey = bits[4]
+			try:
+				user = self.server.desk.user_by_key(userKey)
+			except KeyError:
+				self.f.write("User doesn't exist\n")
+				self.l.warn("User doesn't exist %s" % userKey)
+				return
+			try:
+				media = self.server.desk.media_by_key(songKey)
+			except KeyError:
+				self.f.write("Song doens't exist\n")
+				self.l.warn("Song doesn't exist %s" % songKey)
+				return
+			try:
+				self.server.desk.request_media(media, user)
+			except AlreadyInQueueError:
+				self.f.write('ERROR::Track already in queue')
+				return
+			except Denied, e:
+				self.f.write("ERROR::%s" % e)
+				return
+			self.f.write("REQUEST::SUCCESS")
+
+		def handle_list_pls(self, cmd):
+			self.f.write("TOTAL::0\n")
+
+		def handle_request_upload(self, cmd):
+			bits = cmd.strip().split('::')
+			if len(bits) != 10:
+				self.f.write("Wrong number of arguments\n")
+				self.l.warn("Wrong number of arguments %s"
+						% repr(cmd))
+				return
+			if (bits[2] != 'ARTIST' or
+			    bits[4] != 'TITLE' or
+			    bits[6] != 'USER' or
+			    bits[8] != 'SIZE'):
+				self.f.write("Malformed command\n")
+				self.l.warn("Malformed command %s" % repr(cmd))
+				return
+			artist, title, user, size = bits[3], bits[5], \
+						    bits[7], int(bits[9])
+			self.f.write("SEND::FILE")
+			try:
+				mf = self.server.desk.add_media(CappedReadFile(
+					self.f, size), user, {'artist': artist,
+						              'title': title})
+			except Exception, e:
+				self.l.exception("Error while desk.add_media")
+				self.f.write("ERROR::%s" % e)
+				return
+			self.f.write("UPLOAD::SUCCESS")	
+
+		def handle(self):
+			cmd = self.f.readsome()
+			self.l.info("%s %s" % (repr(self.addr), repr(cmd)))
+			handler = None
+			for key in self.cmd_map:
+				if cmd[:len(key)] == key:
+					handler = self.cmd_map[cmd[:len(key)]]
+					break
+			if handler is None:
+				l.warn("Unknown command %s" % repr(cmd))
+			else:
+				handler(cmd)
 	
 	def _on_media_changed(self):
 		self.threadPool.execute(self._do_refresh_LAR)
@@ -284,174 +401,17 @@ class ClassicRequestServer(Module):
 			self.LAR_count = len(media_l)
 			self.LAR_cond.notifyAll()
 
-	def _handle_list_all(self, conn, addr, l, f, cmd):
-		with self.LAR_cond:
-			if self.LAR is None:
-				self.l.warn("Waiting for LIST::ALL "+
-						"response cache")
-				self.LAR_cond.wait()
-			LAR_count = self.LAR_count
-			LAR = self.LAR
-		f.write("TOTAL::%s\n" % LAR_count)
-		f.write(LAR)
-
-	def _handle_login_user(self, conn, addr, l, f, cmd):
-		key = cmd.strip().split('::', 2)[-1]
-		try:
-			user = self.desk.user_by_key(key)
-		except KeyError:
-			f.write("User doesn't exist\n")
-			self.l.warn("User doesn't exist %s" % key)
-			return
-		if not user.has_access:
-			f.write("Access denied\n")
-			self.l.warn("User hasn't got access %s" % user)
-			return
-		f.write("LOGIN::SUCCESS\n")
-
-	def _handle_request_song(self, conn, addr, l, f, cmd):
-		bits = cmd.strip().split('::')
-		if len(bits) != 5:
-			f.write("Wrong number of arguments\n")
-			self.l.warn("Wrong number of arguments %s" % repr(cmd))
-			return
-		songKey = int(bits[2])
-		userKey = bits[4]
-		try:
-			user = self.desk.user_by_key(userKey)
-		except KeyError:
-			f.write("User doesn't exist\n")
-			self.l.warn("User doesn't exist %s" % userKey)
-			return
-		try:
-			media = self.desk.media_by_key(songKey)
-		except KeyError:
-			f.write("Song doens't exist\n")
-			self.l.warn("Song doesn't exist %s" % songKey)
-			return
-		try:
-			self.desk.request_media(media, user)
-		except AlreadyInQueueError:
-			f.write('ERROR::Track already in queue')
-			return
-		except Denied, e:
-			f.write("ERROR::%s" % e)
-			return
-		f.write("REQUEST::SUCCESS")
-
-	def _handle_list_pls(self, conn, addr, l, f, cmd):
-		f.write("TOTAL::0\n")
-
-	def _handle_request_upload(self, conn, addr, l, f, cmd):
-		bits = cmd.strip().split('::')
-		if len(bits) != 10:
-			f.write("Wrong number of arguments\n")
-			self.l.warn("Wrong number of arguments %s" % repr(cmd))
-			return
-		if (bits[2] != 'ARTIST' or
-		    bits[4] != 'TITLE' or
-		    bits[6] != 'USER' or
-		    bits[8] != 'SIZE'):
-			f.write("Malformed command\n")
-			self.l.warn("Malformed command %s" % repr(cmd))
-			return
-		artist, title, user, size = bits[3], bits[5], \
-					    bits[7], int(bits[9])
-		f.write("SEND::FILE")
-		try:
-			mf = self.desk.add_media(CappedReadFile(f, size), user,
-					{'artist': artist,
-					 'title': title})
-		except Exception, e:
-			self.l.exception("Error while desk.add_media")
-			f.write("ERROR::%s" % e)
-			return
-		f.write("UPLOAD::SUCCESS")	
-
-	def _dispatch_request(self, conn, addr, n):
-		try:
-			l = logging.getLogger("%s.%s" % (self.l.name, n))
-			f = IntSocketFile(conn)
-			with self.lock:
-				self.connections.add(f)
-			cmd = f.readsome()
-			l.info("%s %s" % (repr(addr), repr(cmd)))
-			handler = None
-			for key in self.cmd_map:
-				if cmd[:len(key)] == key:
-					handler = self.cmd_map[cmd[:len(key)]]
-					break
-			if handler is None:
-				l.warn("Unknown command %s" % repr(cmd))
-			else:
-				handler(conn, addr, l, f, cmd)
-		finally:
-			with self.lock:
-				self.connections.remove(f)
-			conn.close()
-
 	def __init__(self, settings, logger):
 		super(ClassicRequestServer, self).__init__(settings, logger)
-		self.running = False
-		self.connections = set()
-		self.lock = threading.Lock()
-		self._sleep_socket_pair = socket.socketpair()
-		self.n_conn = 0
 		self.desk.on_media_changed.register(
 				self._on_media_changed)
-		self.cmd_map = {'LIST::QUEUE': self._handle_list_queue,
-				'LIST::NOWPLAYING': self._handle_nowplaying,
-				'LIST::ALL': self._handle_list_all,
-				'LIST::PLAYLISTS::USER::': self._handle_list_pls,
-				'REQUEST::SONG::': self._handle_request_song,
-				'REQUEST::UPLOAD::': self._handle_request_upload,
-				'LOGIN::USER::': self._handle_login_user}
 		self.LAR_cond = threading.Condition()
 		self.LAR = None
 		self.LAR_count = 0
 		self._on_media_changed()
-		
-	def _inner_run(self):
-		rlist, wlist, xlist = select.select(
-				[self._sleep_socket_pair[1],
-				 self.socket], [],
-				[self.socket])
-		if self._sleep_socket_pair[1] in rlist:
-			return True
-		if self.socket in xlist:
-			raise IOError, "Accept socket in select clist"
-		if not self.socket in rlist:
-			return False
-		conn, addr = self.socket.accept()
-		self.n_conn += 1
-		self.threadPool.execute(self._dispatch_request,
-					conn, addr, self.n_conn)
-		return False
-
-	def run(self):
-		self.running = True
-		try:
-			s = self.socket = socket.socket(socket.AF_INET,
-							socket.SOCK_STREAM)
-			s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-			s.bind((self.host, self.port))
-			s.listen(3)
-			self.l.info("Listening on %s:%s" % (self.host, self.port))
-			while self.running:
-				if self._inner_run():
-					break
-		finally:
-			self.socket.close()
-			
-	def stop(self):
-		self.running = False
-		self._sleep_socket_pair[0].send('Good morning!')
-		with self.lock:
-			conns = set(self.connections)
-		for conn in conns:
-			conn.interrupt()
-		with self.LAR_cond:
-			self.LAR_cond.notifyAll()
+	
+	def create_handler(self, con, addr, logger):
+		return ClassicRequestServer.Handler(self, con, addr, logger)
 
 class ClassicScreen(Module):
 	def __init__(self, settings, logger):

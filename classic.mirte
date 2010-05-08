@@ -1,5 +1,6 @@
 includes:
   - sarah/threadPool
+  - sarah/socketServer
   - core
 definitions:
   classicCollection:
@@ -52,11 +53,9 @@ definitions:
     inherits: [random]
   classicRequestServer:
     implementedBy: maried.classic.ClassicRequestServer
-    inherits: [requestServer]
+    inherits: [requestServer,tcpSocketServer]
     settings:
-      host: { type: str, default: 0.0.0.0 }
-      port: { type: int, default: 1337 }
-      threadPool: { type: threadPool }
+      port: { default: 1337 }
   classicScreen:
     implementedBy: maried.classic.ClassicScreen
     inherits: [screen]
