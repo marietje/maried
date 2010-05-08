@@ -1,5 +1,4 @@
 includes:
-  - sarah/threadPool
   - sarah/socketServer
   - core
 definitions:

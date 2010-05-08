@@ -1,5 +1,4 @@
 includes:
-  - sarah/threadPool
   - ../core
 definitions:
   ajaxServer:
