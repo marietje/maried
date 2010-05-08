@@ -4,6 +4,7 @@ import gst
 import gtk
 import time
 import pygst
+import os.path
 import gobject
 import datetime
 import threading
@@ -98,6 +99,7 @@ class GstMediaInfo(MediaInfo):
 		self.jobs = set()
 
 	def get_info_by_path(self, path):
+		path = os.path.abspath(path)
 		j = GstMediaInfo.Job(self, path)
 		with self.lock:
 			self.jobs.add(j)
@@ -165,7 +167,7 @@ class GstPlayer(Player):
 			return
 		self.l.info("Playing %s" % media)
 		self.bin.set_property('uri', 
-			"file:///"+mf.get_named_file())
+			"file:///"+os.path.abspath(mf.get_named_file()))
 		tl = gst.TagList()
 		tl[gst.TAG_TRACK_GAIN] = media.trackGain
 		tl[gst.TAG_TRACK_PEAK] = media.trackPeak
