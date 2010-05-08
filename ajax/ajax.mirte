@@ -6,8 +6,5 @@ definitions:
     implementedBy: maried.ajax.AjaxServer
     inherits: [ tcpSocketServer ]
     settings:
-      host: {type: str, default: 0.0.0.0}
-      port: {type: int, default: 8080}
-      threadPool: {type: threadPool}
+      port: {default: 8080}
       desk: {type: classicDesk}
-    run: True
