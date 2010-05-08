@@ -1,9 +1,0 @@
-includes:
-  - threadPool.mirte
-definitions:
-  logServer:
-    implementedBy: maried.log.LogServer
-    settings:
-      socketPath: {type: str, default: maried-log.socket}
-      threadPool: {type: threadPool}
-    run: True

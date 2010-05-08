@@ -1,5 +1,5 @@
 includes:
-  - core.mirte
+  - core
 definitions:
   scrobbler:
     run: true

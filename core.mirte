@@ -1,5 +1,5 @@
 includes:
-  - selectPool.mirte
+  - sarah/selectPool
 definitions:
   collection:
     settings:
@@ -67,17 +67,3 @@ definitions:
     settings:
       desk: {type: desk}
   users: {}
-  socketServer:
-    settings:
-      selectPool: { type: selectPool }
-      threadPool: { type: threadPool }
-    run: true
-  unixSocketServer:
-    inherits: [ socketServer ]
-    settings:
-      socketPath: { type: str }
-  tcpSocketServer:
-    inherits: [ socketServer ]
-    settings:
-      host: { type: str, default: 0.0.0.0 }
-      port: { type: str }

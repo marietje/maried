@@ -1,5 +1,6 @@
-from maried.core import Module, Event, Denied, TCPSocketServer
-from maried.io import IntSocketFile
+from maried.core import Module, Event, Denied
+from sarah.io import IntSocketFile
+from sarah.socketserver import TCPSocketServer
 
 import threading
 import os.path

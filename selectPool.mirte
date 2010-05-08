@@ -1,6 +1,0 @@
-definitions:
-  selectPool:
-    implementedBy: maried.selectPool.SelectPool
-    settings:
-      threadPool: {type: threadPool}
-    run: true

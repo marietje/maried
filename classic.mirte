@@ -1,6 +1,6 @@
 includes:
-  - threadPool.mirte
-  - core.mirte
+  - sarah/threadPool
+  - core
 definitions:
   classicCollection:
     implementedBy: maried.classic.ClassicCollection

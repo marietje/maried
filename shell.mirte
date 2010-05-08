@@ -1,9 +1,0 @@
-includes:
-  - threadPool.mirte
-  - core.mirte
-definitions:
-  shellServer:
-    implementedBy: maried.shell.ShellServer
-    inherits: [ unixSocketServer ]
-    settings:
-      manager: {type: manager}

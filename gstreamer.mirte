@@ -1,5 +1,5 @@
 includes:
-  - core.mirte
+  - core
 definitions:
   gstMediaInfo:
     implementedBy: maried.gstreamer.GstMediaInfo

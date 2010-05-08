@@ -1,8 +1,9 @@
 from __future__ import with_statement
 
-from maried.mirte import Module, Event
+from mirte.core import Module
+from sarah.event import Event
 from maried.core import *
-from maried.io import *
+from sarah.io import *
 
 import os
 import time
