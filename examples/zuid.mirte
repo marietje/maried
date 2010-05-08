@@ -1,0 +1,64 @@
+# Base configuration of marietje zuid
+includes:
+  - maried/classic
+  - maried/gstreamer
+  - sarah/log
+  - sarah/shell
+  - maried/ajax/ajax
+  - maried/lastfm
+instances:
+  classicDb:
+    module: classicDb
+    db: marietje
+  collection:
+    module: classicCollection
+    db: classicDb
+  desk:
+    module: classicDesk
+    queue: amalgamatedQueue
+    collection: collection
+    mediaStore: mediaStore
+    orchestrator: orchestrator
+    users: users
+  history:
+    module: classicHistory
+    collection: collection
+    db: classicDb
+  mediaInfo:
+    module: gstMediaInfo
+  mediaStore:
+    module: classicMediaStore
+    path: media
+  orchestrator:
+    module: classicOrchestrator
+  randomQueue:
+    module: randomQueue
+    random: random
+  player:
+    module: gstPlayer
+  amalgamatedQueue:
+    module: amalgamatedQueue
+    first: queue
+    second: randomQueue
+  queue:
+    module: classicQueue
+    db: classicDb
+    collection: collection
+  random:
+    module: classicRandom
+    collection: collection
+  requestServer:
+    module: classicRequestServer
+    desk: desk
+  screen:
+    module: classicScreen
+    desk: desk
+  users:
+    module: classicUsers
+  shellServer:
+    module: shellServer
+  ajaxServer:
+    module: ajaxServer
+    desk: desk
+  logServer:
+    module: logServer
