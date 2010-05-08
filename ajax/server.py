@@ -1,4 +1,6 @@
-from maried.core import Module, Event, Denied
+from mirte.core import Module
+from maried.core import Denied
+from sarah.event import Event
 from sarah.io import IntSocketFile
 from sarah.socketserver import TCPSocketServer
 

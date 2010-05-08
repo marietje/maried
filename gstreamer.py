@@ -9,7 +9,9 @@ import gobject
 import datetime
 import threading
 
-from maried.core import Module, Event, Player, MediaInfo, Stopped
+from maried.core import Player, MediaInfo, Stopped
+from mirte.core import Module
+from sarah.event import Event
 
 class GtkMainLoop(Module):
 	def run(self):
