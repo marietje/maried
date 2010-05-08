@@ -3,7 +3,7 @@ from __future__ import with_statement
 from mirte.core import Module
 from maried.core import *
 from sarah.event import Event
-from sarah.socketserver import TCPSocketServer
+from sarah.socketServer import TCPSocketServer
 from sarah.io import *
 
 import os

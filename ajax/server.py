@@ -2,7 +2,7 @@ from mirte.core import Module
 from maried.core import Denied
 from sarah.event import Event
 from sarah.io import IntSocketFile
-from sarah.socketserver import TCPSocketServer
+from sarah.socketServer import TCPSocketServer
 
 import threading
 import os.path
