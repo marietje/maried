@@ -6,6 +6,7 @@ includes:
   - sarah/shell
   - maried/ajax/ajax
   - maried/lastfm
+  - maried/mongo
 instances:
   classicDb:
     module: classicDb
@@ -26,9 +27,6 @@ instances:
     db: classicDb
   mediaInfo:
     module: gstMediaInfo
-  mediaStore:
-    module: classicMediaStore
-    path: media
   orchestrator:
     module: classicOrchestrator
   randomQueue:
@@ -62,3 +60,8 @@ instances:
     desk: desk
   logServer:
     module: logServer
+  mongoDb:
+    module: mongoDb
+  mediaStore:
+    module: mongoMediaStore
+    db: mongoDb
