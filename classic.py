@@ -77,6 +77,9 @@ class ClassicMediaFile(MediaFile):
 		return open(self.path)
 	def get_named_file(self):
 		return self.path
+	def get_info(self):
+		return self.store.mediaInfo.get_info_by_path(
+				self.get_named_file())
 	def __repr__(self):
 		return "<ClassicMediaFile %s>" % self._key
 

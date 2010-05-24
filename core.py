@@ -35,9 +35,8 @@ class MediaFile(object):
 	def __ne__(self, other):
 		return self._key != other.key
 	def get_info(self):
-		return self.store.mediaInfo.get_info_by_path(
-				self.get_named_file())
-
+		with self.open() as f:
+			return self.store.mediaInfo.get_info(f)
 	@property
 	def key(self):
 		return self._key
