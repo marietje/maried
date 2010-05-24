@@ -1,0 +1,16 @@
+includes:
+  - core
+definitions:
+  mongoDb:
+    implementedBy: maried.mongo.MongoDb
+    settings:
+      host: { type: str, default: localhost }
+      port: { type: int, default: 27017 }
+      db: { type: str, default: marietje }
+  mongoMediaStore:
+    implementedBy: maried.mongo.MongoMediaStore
+    inherits: [mediaStore]
+    settings:
+      db: {type: mongoDb }
+      threadPool: {type: threadPool}
+      collection: {type: str, default: mediaStore}
