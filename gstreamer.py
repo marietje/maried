@@ -12,6 +12,7 @@ import threading
 from maried.core import Player, MediaInfo, Stopped
 from mirte.core import Module
 from sarah.event import Event
+from sarah.io import SocketPairWrappedFile
 
 class GtkMainLoop(Module):
 	def run(self):
@@ -22,7 +23,7 @@ class GtkMainLoop(Module):
 
 class GstMediaInfo(MediaInfo):
 	class Job(object):
-		def __init__(self, mi, path):
+		def __init__(self, mi, uri):
 			self.mi = mi
 			self.event = threading.Event()
 			self.inError = False
@@ -45,7 +46,7 @@ class GstMediaInfo(MediaInfo):
 			bus.add_signal_watch()
 			bus.connect('message', self.on_message)
 			bus.connect('message::tag', self.on_tag)
-			self.bin.set_property('uri', 'file://'+path)
+			self.bin.set_property('uri', uri)
 			self.bin.set_state(gst.STATE_PLAYING)
 		
 		def on_message(self, bus, message):
@@ -99,10 +100,30 @@ class GstMediaInfo(MediaInfo):
 		super(GstMediaInfo, self).__init__(settings, logger)
 		self.lock = threading.Lock()
 		self.jobs = set()
+	
+	def get_info(self, stream):
+		wrapper = None
+		if hasattr(stream, 'fileno'):
+			uri = 'fd://%s' % stream.fileno()
+		else:
+			wrapper = SocketPairWrappedFile(stream)
+			uri = 'fd://%s' % wrapper.fileno()
+			self.threadPool.execute(wrapper.run)
+		j = GstMediaInfo.Job(self, uri)
+		with self.lock:
+			self.jobs.add(j)
+		j.event.wait()
+		with self.lock:
+			self.jobs.remove(j)
+		if not wrapper is None:
+			wrapper.close()
+		if j.inError:
+			raise ValueError
+		return j.result
 
 	def get_info_by_path(self, path):
-		path = os.path.abspath(path)
-		j = GstMediaInfo.Job(self, path)
+		uri = 'file://' + os.path.abspath(path)
+		j = GstMediaInfo.Job(self, uri)
 		with self.lock:
 			self.jobs.add(j)
 		j.event.wait()
@@ -168,8 +189,15 @@ class GstPlayer(Player):
 			self.l.error("%s's mediafile doesn't exist" % media)
 			return
 		self.l.info("Playing %s" % media)
-		self.bin.set_property('uri', 
-			"file:///"+os.path.abspath(mf.get_named_file()))
+		stream = mf.open()
+		wrapper = None
+		if hasattr(stream, 'fileno'):
+			uri = 'fd://%s'%stream.fileno()
+		else:
+			wrapper = SocketPairWrappedFile(stream)
+			self.threadPool.execute(wrapper.run)
+			uri = 'fd://%s'%wrapper.fileno()
+		self.bin.set_property('uri', uri)
 		tl = gst.TagList()
 		tl[gst.TAG_TRACK_GAIN] = media.trackGain
 		tl[gst.TAG_TRACK_PEAK] = media.trackPeak
@@ -177,6 +205,10 @@ class GstPlayer(Player):
 		self.bin.set_state(gst.STATE_PLAYING)
 		with self.idleCond:
 			self.idleCond.wait()
+		if not wrapper is None:
+			wrapper.close()
+		if hasattr(stream, 'close'):
+			stream.close()
 	
 	def _reset(self):
 		self.bin.set_state(gst.STATE_NULL)
