@@ -347,6 +347,9 @@ class Random(Module):
 class MediaInfo(Module):
 	def get_info(self, stream):
 		pass
+	def get_info_by_path(self, path):
+		with open(path) as f:
+			return self.get_info(f)
 
 class MediaStore(Module):
 	def create(self, stream):
