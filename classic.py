@@ -379,6 +379,9 @@ class ClassicRequestServer(TCPSocketServer):
 				l.warn("Unknown command %s" % repr(cmd))
 			else:
 				handler(cmd)
+		
+		def interrupt(self):
+			self.f.interrupt()
 	
 	def _on_media_changed(self):
 		self.threadPool.execute(self._do_refresh_LAR)
