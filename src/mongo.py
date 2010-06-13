@@ -33,7 +33,7 @@ class MongoDb(Module):
 		if None in (self.host, self.port, self.db):
 			return
 		self.con = pymongo.Connection(self.host, self.port)
-		self._db = self.con[self.db]
+		self.db = self.con[self.db]
 		self.ready = True
 		self.on_changed()
 
@@ -49,7 +49,7 @@ class MongoMediaStore(MediaStore):
 	def on_db_changed(self):
 		if not self.db.ready:
 			return
-		self.fs = gridfs.GridFS(self.db._db, self.collection)
+		self.fs = gridfs.GridFS(self.db.db, self.collection)
 		self.threadPool.execute(self._do_refresh_keys)
 	
 	def _do_refresh_keys(self):
