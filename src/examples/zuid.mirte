@@ -4,9 +4,9 @@ includes:
   - maried/gstreamer
   - sarah/log
   - sarah/shell
-  - maried/ajax/ajax
   - maried/lastfm
   - maried/mongo
+  - maried/comet
 instances:
   classicDb:
     module: classicDb
@@ -45,9 +45,6 @@ instances:
   random:
     module: classicRandom
     collection: collection
-  requestServer:
-    module: classicRequestServer
-    desk: desk
   screen:
     module: classicScreen
     desk: desk
@@ -55,9 +52,6 @@ instances:
     module: classicUsers
   shellServer:
     module: shellServer
-  ajaxServer:
-    module: ajaxServer
-    desk: desk
   logServer:
     module: logServer
   mongoDb:
@@ -65,3 +59,6 @@ instances:
   mediaStore:
     module: mongoMediaStore
     db: mongoDb
+  cometServer:
+    module: mariedCometServer
+    desk: desk
