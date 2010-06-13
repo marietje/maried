@@ -1,0 +1,9 @@
+includes:
+  - core
+  - sarah/comet
+definitions:
+  mariedCometServer:
+    implementedBy: maried.comet.MariedCometServer
+    inherits: [ cometServer ]
+    settings:
+      desk: {type: desk}
