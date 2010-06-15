@@ -66,5 +66,5 @@ definitions:
     settings:
       maxQueueLength: {type: int, default: 2700}
       maxQueueCount: {type: int, default: 15}
-      collection: {type: classicCollection}
+      collection: {type: collection}
       queue: {type: classicQueue}
