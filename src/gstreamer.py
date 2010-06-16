@@ -81,9 +81,9 @@ class GstMediaInfo(MediaInfo):
 				elif key == 'title':
 					self.result[key] = tagList[key]
 				elif key == gst.TAG_TRACK_PEAK:
-					self.result['track_peak'] = tagList[key]
+					self.result['trackPeak'] = tagList[key]
 				elif key == gst.TAG_TRACK_GAIN:
-					self.result['track_gain'] = tagList[key]
+					self.result['trackGain'] = tagList[key]
 
 		def interrupt(self):
 			self.inError = True
