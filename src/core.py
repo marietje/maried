@@ -7,6 +7,7 @@ import threading
 
 from mirte.core import Module
 from sarah.event import Event
+from sarah.dictlike import DictLike
 
 class Denied(Exception):
 	pass
@@ -15,11 +16,23 @@ class Stopped(Exception):
 class EmptyQueueException(Exception):
 	pass
 
-class Media(object):
+class Media(DictLike):
+	def __init__(self, coll, data):
+		super(Media, self).__init__(data)
+		self.self.coll = coll
 	def unlink(self):
-		raise NotImplementedError
+		self.coll.unlink_media(self)
 	def save(self):
-		raise NotImplementedError
+		self.coll.save_media(self)
+	@property
+	def mediaFile(self):
+		return self.coll.mediaStore.by_key(self.mediaFileKey)
+	def __eq__(self, other):
+		return self.key == other.key
+	def __ne__(self, other):
+		return self.key != other.key
+
+
 class MediaFile(object):
 	def __init__(self, store, key):
 		self._key = key
@@ -43,38 +56,29 @@ class MediaFile(object):
 	@property
 	def key(self):
 		return self._key
-class BaseRequest(object):
-	def __init__(self, media, by):
-		self.by = by
-		self.media = media
+class BaseRequest(DictLike):
+	pass
 class PastRequest(BaseRequest):
-	def __init__(self, history, media, by, at):
-		super(PastRequest, self).__init__(media, by)
-		self.history = history
-		self.at = at
+	def __init__(self, history, data):
+		super(PastRequest, self).__init__(data)
+		self.self.history = history
 	def remove(self):
 		raise NotImplementedError
 class Request(BaseRequest):
-	def __init__(self, queue, media, by):
-		super(Request, self).__init__(media, by)
-		self.queue = queue
+	def __init__(self, queue, data):
+		super(Request, self).__init__(data)
+		self.self.queue = queue
 	def move(self, amount):
 		self.queue.move(self, amount)
 	def cancel(self):
 		self.queue.cancel(self)
-class OrphanRequest(Request):
-	def __init__(self, queue, media):
-		super(OrphanRequest, self).__init__(queue, media, None)
-class User(object):
-	def __init__(self, key, realName):
-		self.realName = realName
-		self._key = key
+class User(DictLike):
 	def has_access(self):
 		raise NotImplementedError
 	def __eq__(self, other):
-		return self._key == other.key
+		return self.key == other.key
 	def __ne__(self, other):
-		return self._key != other.key
+		return self.key != other.key
 
 class Desk(Module):
 	def __init__(self, settings, logger):
@@ -140,7 +144,7 @@ class Users(Module):
 		raise NotImplementedError
 	def assert_access(self, user):
 		return NotImplementedError
-	def user_by_key(self, key):
+	def by_key(self, key):
 		return NotImplementedError
 
 class RandomQueue(Module):
@@ -163,8 +167,8 @@ class RandomQueue(Module):
 		return ret
 	def _grow(self):
 		if self.random.ready:
-			self.list.insert(0, OrphanRequest(
-				self, self.random.pick()))
+			self.list.insert(0, Request(self, {
+				'media': self.random.pick()}))
 	def request(self, media, user):
 		assert False # shouldn't do that
 	def cancel(self, request):
@@ -388,5 +392,9 @@ class Collection(Module):
 	def media_keys(self):
 		raise NotImplementedError
 	def by_key(self, key):
+		raise NotImplementedError
+	def save_media(self, media):
+		raise NotImplementedError
+	def unlink_media(self, media):
 		raise NotImplementedError
 

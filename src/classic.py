@@ -30,44 +30,11 @@ class MaxQueueCountExceededError(Denied):
 	pass
 
 class ClassicMedia(Media):
-	def __init__(self, coll, key, artist, title, length, mediaFileKey,
-			   uploadedByKey, uploadedTimestamp, trackGain,
-			   trackPeak):
-		self.coll = coll
-		self._key = key
-		self.artist = artist
-		self.title = title
-		self.length = length
-		self.mediaFileKey = mediaFileKey
-		self.uploadedByKey = uploadedByKey
-		self.uploadedTimestamp = uploadedTimestamp
-		self.trackGain = trackGain
-		self.trackPeak = trackPeak
-	
+	def __init__(self, coll, data):
+		super(ClassicMedia, self).__init__(coll, data)
 	@property
 	def uploadedBy(self):
 		return self.coll._user_by_key(self.uploadedByKey)
-	@property
-	def mediaFile(self):
-		return self.coll.mediaStore.by_key(self.mediaFileKey)
-	
-	@property
-	def key(self):
-		return self._key
-
-	def save(self):
-		self.coll._save_media(self)
-	
-	def unlink(self):
-		self.coll._unlink_media(self)
-
-	def __repr__(self):
-		return "<ClassicMedia %s - %s>" % (self.artist, self.title)
-
-	def __eq__(self, other):
-		return self._key == other.key
-	def __ne__(self, other):
-		return self._key != other.key
 
 class ClassicMediaFile(MediaFile):
 	def __init__(self, store, path, key):
@@ -83,10 +50,7 @@ class ClassicMediaFile(MediaFile):
 	def __repr__(self):
 		return "<ClassicMediaFile %s>" % self._key
 
-class ClassicBaseRequest(object):
-	def __init__(self, mediaKey, byKey):
-		self.mediaKey = mediaKey
-		self.byKey = byKey
+class ClassicBaseRequest(BaseRequest):
 	@property
 	def media(self):
 		return self.collection.by_key(self.mediaKey)
@@ -97,41 +61,21 @@ class ClassicBaseRequest(object):
 		return self.collection._user_by_key(self.byKey)
 
 class ClassicPastRequest(PastRequest, ClassicBaseRequest):
-	def __init__(self, history, key, mediaKey, byKey, at):
-		ClassicBaseRequest.__init__(self, mediaKey, byKey)
-		self.at = at
-		self.key = key
-		self.history = history
-		self.collection = history.collection
-	def __repr__(self):
-		return "<ClassicPastRequest %s - %s @ %s>" % (
-				self.byKey,
-				repr(self.media),
-				self.at)
+	def __init__(self, history, data):
+		super(ClassicPastRequest, self).__init__(history, data)
+		self.self.collection = self.history.collection
 	def remove(self):
 		self.history._remove_request(self)
 
 class ClassicRequest(Request, ClassicBaseRequest):
-	def __init__(self, queue, key, mediaKey, byKey):
-		ClassicBaseRequest.__init__(self, mediaKey, byKey)
-		self.key = key
-		self.collection = queue.collection
-	def __repr__(self):
-		return "<ClassicRequest %s - %s>" % (self.byKey,
-						     repr(self.media))
+	def __init__(self, queue, data):
+		super(ClassicRequest, self).__init__(queue, data)
+		self.self.collection = self.queue.collection
 
 class ClassicUser(User):
-	def __init__(self, coll, key, realName, level, passwordHash):
-		super(ClassicUser, self).__init__(key, realName)
-		self.level = level
-		self.coll = coll
-		self.passwordHash = passwordHash
-	@property
-	def key(self):
-		return self._key
-	def __repr__(self):
-		return "<ClassicUser %s %s>" % (self._key,
-						self.realName)
+	def __init__(self, collection, data):
+		super(ClassicUser, self).__init__(data)
+		self.self.collection = collection
 	@property
 	def has_access(self):
 		return self.level >= 2
@@ -179,7 +123,7 @@ class ClassicQueue(Queue):
 	def requests(self):
 		ret = list()
 		for tmp in self.db.queue_get_requests():
-			ret.append(ClassicRequest(self, *tmp))
+			ret.append(ClassicRequest(self, tmp))
 		return ret
 	def shift(self):
 		if not self.db.ready:
@@ -187,7 +131,7 @@ class ClassicQueue(Queue):
 		tmp = self.db.queue_shift()
 		if tmp is None:
 			raise EmptyQueueException
-		return ClassicRequest(self, *tmp)
+		return ClassicRequest(self, tmp)
 	def cancel(self, request):
 		raise NotImplementedError
 	def move(self, request, amount):
@@ -209,20 +153,20 @@ class ClassicHistory(History):
 		self.db.history_record(byKey, trackId, timeStamp)
 		self.on_record(ClassicPastRequest(
 			self,
-			None,
-			media.key,
-			None if request is None else request.by.key,
-			at))
+			{'key': None,
+			 'mediaKey': media.key,
+			 'byKey': None if request is None else request.by.key,
+			 'at': at}))
 	
 	def list_past_requests(self):
 		for logId, timeStamp, userName, trackId \
 				in self.db.history_list():
 			at = datetime.datetime.fromtimestamp(timeStamp)
-			yield ClassicPastRequest(self,
-						 logId,
-					         trackId,
-						 userName,
-						 at)
+			yield ClassicPastRequest(self, {
+				'key': logId,
+				'mediaKey': trackId,
+				'byKey': userName,
+				'at': at})
 	
 	def _remove_request(self, req):
 		self.db.history_remove_request(req.key)
@@ -572,17 +516,19 @@ class ClassicCollection(Collection):
 	def osc_db(self):
 		self.db.on_changed.register(self.on_db_changed)
 		self.on_db_changed()
-	
+
 	def on_db_changed(self):
 		if not self.db.ready:
 			return
 		with self.lock:
 			self._media = {}
 			for tmp in self.db.list_media():
-				self._media[tmp[0]] = ClassicMedia(self, *tmp)
+				self._media[tmp['key']] = ClassicMedia(
+								self, tmp)
 			self.users = {}
 			for tmp in self.db.list_users():
-				self.users[tmp[0]] = ClassicUser(self, *tmp)
+				self.users[tmp['key']] = ClassicUser(
+							self, tmp)
 		self.l.info("Cached %s tracks, %s users" % (len(self._media),
 							    len(self.users)))
 		self.on_keys_changed()
@@ -618,30 +564,25 @@ class ClassicCollection(Collection):
 		info = mediaFile.get_info()
 		if not info is None:
 			info.update(extraInfo)
-		tmp = (info['artist'],
-		       info['title'],
-		       info['length'],
-		       mediaFile.key,
-		       user,
-		       int(time.time()),
-		       info.get('track_gain', None),
-		       info.get('track_peak', None))
-		key = self.db.add_media(*tmp)
+		info.update({'mediaFileKey': mediaFile.key,
+			     'uploaededByKey': user,
+			     'uploadedTimestamp': int(time.time())})
+		info['key'] = self.db.add_media(tmp)
 		with self.lock:
-			self._media[key] = ClassicMedia(self, key, *tmp)
+			self._media[key] = ClassicMedia(self, **info)
 			if len(self._media) == 1:
 				self.got_media_event.set()
 		self.on_keys_changed()
 		self.on_changed()
 	
-	def _unlink_media(self, media):
+	def unlink_media(self, media):
 		with self.lock:
 			del(self._media[media.key])
 		self.db.remove_media(media.key)
 		self.on_keys_changed()
 		self.on_changed()
 
-	def _save_media(self, media):
+	def save_media(self, media):
 		self.db.update_media(media.key,
 				     media.artist,
 				     media.title,
@@ -792,7 +733,9 @@ class ClassicDb(Module):
 			UPDATE queue
 			SET played=1
 			WHERE requestid=%s; """, requestId)
-		ret = (requestId, trackId, byKey)
+		ret = {'key': requestId,
+		       'mediaKey': trackId,
+		       'byKey': byKey}
 		if not cursor is None: cursor.close()
 		return ret
 
@@ -806,7 +749,9 @@ class ClassicDb(Module):
 			WHERE played=0
 			ORDER BY requestId; """)
 		for requestId, trackId, requestedBy in c.fetchall():
-			yield requestId, trackId, requestedBy
+			yield {'key':requestId,
+			       'mediaKey': trackId,
+			       'byKey': requestedBy}
 		if not cursor is None: cursor.close()
 	
 	def queue_request(self, media, user, cursor=None):
@@ -829,7 +774,10 @@ class ClassicDb(Module):
 			SELECT username, fullName, level, password
 			FROM users; """)
 		for username, fullName, level, passwordHash in c.fetchall():
-			yield username, fullName, level, passwordHash
+			yield {'key': username,
+			       'realName': fullName,
+			       'level': level,
+			       'passwordHash': passwordHash}
 		if not cursor is None: cursor.close()
 
 	def list_media(self, cursor=None):
@@ -843,9 +791,15 @@ class ClassicDb(Module):
 		for (trackId, artist, title, length, fileName, uploadedBy,
 				uploadedTimestamp, trackGain, trackPeak) \
 					in c.fetchall():
-			yield (trackId, artist, title, length, fileName,
-			       uploadedBy, uploadedTimestamp, trackGain,
-			       trackPeak)
+			yield {'key': trackId,
+				'artist': artist,
+				'title': title,
+				'length': length,
+				'mediaFileKey': fileName,
+				'uploadedByKey': uploadedBy,
+				'uploadedTimestamp': uploadedTimestamp,
+				'trackGain': trackGain,
+				'trackPeak': trackPeak}
 		if not cursor is None: cursor.close()
 	
 	def remove_media(self, trackId, cursor=None):
