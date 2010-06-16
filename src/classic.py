@@ -114,7 +114,7 @@ class ClassicUsers(Users):
 		if not user.may_move:
 			raise Denied
 	def by_key(self, key):
-		return self.collection._user_by_key(key)
+		return self.collection.user_by_key(key)
 
 class ClassicQueue(Queue):
 	def request(self, media, user):
