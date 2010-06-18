@@ -14,3 +14,19 @@ definitions:
       db: {type: mongoDb }
       threadPool: {type: threadPool}
       collection: {type: str, default: mediaStore}
+  mongoCollection:
+    implementedBy: maried.mongo.MongoCollection
+    inherits: [collection]
+    settings:
+      db: {type: mongoDb}
+  mongoHistory:
+    implementedBy: maried.mongo.MongoHistory
+    inherits: [history]
+    settings:
+      db: {type: mongoDb}
+  mongoUsers:
+    implementedBy: maried.mongo.MongoUsers
+    inherits: [users]
+    settings:
+      db: {type: mongoDb}
+

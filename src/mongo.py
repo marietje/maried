@@ -1,8 +1,10 @@
 from __future__ import with_statement
 
-from maried.core import MediaStore, MediaFile
+from maried.core import MediaStore, MediaFile, Media, Collection, User, Users, \
+			History, Request, PastRequest
 from mirte.core import Module
 from sarah.event import Event
+from sarah.dictlike import AliasingMixin
 
 import threading
 import tempfile
@@ -18,6 +20,51 @@ class MongoMediaFile(MediaFile):
 		return self.store._get_named_file(self.key)
 	def __repr__(self):
 		return "<MongoMediaFile %s>" % self._key
+
+class MongoUser(AliasingMixin, User):
+	aliases = {'key': '_id',
+		   'realName': 'n',
+		   'level': 'l',
+		   'passwordHash': 'p'}
+	def __init__(self, coll, data):
+		super(MongoUser, self).__init__(self.normalize_dict(data))
+		self.self.collection = coll
+	@property
+        def has_access(self):
+                return self.level >= 2
+        @property
+        def may_cancel(self):
+                return self.level >= 3
+        @property
+        def may_move(self):
+                return self.level >= 3
+	def check_password(self, password):
+		return self.passwordHash == hashlib.md5(password).hexdigest()
+
+class MongoMedia(AliasingMixin, Media):
+	aliases = {'key': '_id',
+		   'artist': 'a',
+		   'title': 't',
+		   'trackGain': 'tg',
+		   'trackPeak': 'tp',
+		   'length': 'l',
+		   'mediaFileKey': 'k',
+		   'uploadedByKey': 'ub',
+		   'uploadedTimestamp': 'ut'}
+	def __init__(self, coll, data):
+		super(MongoMedia, self).__init__(self.normalize_dict(data))
+
+class MongoPastRequest(AliasingMixin, PastRequest):
+	aliases = {'key': '_id',
+		   'byKey': 'b',
+		   'at': 'a',
+		   'mediaKey': 'm'}
+
+class MongoRequest(AliasingMixin, PastRequest):
+	aliases = {'key': '_id',
+		   'byKey': 'b',
+		   'mediaKey': 'm'}
+
 
 class MongoDb(Module):
 	def __init__(self, settings, logger):
@@ -35,6 +82,89 @@ class MongoDb(Module):
 		self.con = pymongo.Connection(self.host, self.port)
 		self.db = self.con[self.db]
 		self.ready = True
+		self.on_changed()
+
+class MongoCollection(Collection):
+	def __init__(self, settings, logger):
+		super(MongoCollection, self).__init__(settings, logger)
+		self._media = None
+		self.lock = threading.Lock()
+		self.register_on_setting_changed('db', self.osc_db)
+		self.osc_db()
+	
+	def osc_db(self):
+		self.db.on_changed.register(self.on_db_changed)
+		self.on_db_changed()
+
+	def on_db_changed(self):
+		if not self.db.ready:
+			return
+		with self.lock:
+			self.cMedia = self.db.db['media']
+			self.cUsers = self.db.db['users']
+			self._media = {}
+			self.users = {}
+			for tmp in self.cMedia.find():
+				self._media[tmp['_id']] = MongoMedia(self, tmp)
+			for tmp in self.cUsers.find():
+				self.users[tmp['_id']] = MongoUser(self, tmp)
+		self.l.info("Cached %s media %s users" % (len(self._media),
+							  len(self.users)))
+		self.on_keys_changed()
+		self.on_changed()
+		with self.lock:
+			if len(self._media) > 0:
+				self.got_media_event.set()
+			else:
+				self.got_media_event.clear()
+	
+	@property
+	def media(self):
+		if self._media is None:
+			return list()
+		return self._media.itervalues()
+
+	@property
+	def media_keys(self):
+		if self._media is None:
+			return list()
+		return self._media.keys()
+
+	def by_key(self, key):
+		return self._media[key]
+
+	def _user_by_key(self, key):
+		return self.users[key]
+
+	def stop(self):
+		self.got_media_event.set()
+
+	def add(self, mediaFile, user, extraInfo=None):
+		info = mediaFile.get_info()
+		if not info is None:
+			info.update(extraInfo)
+		info.update({
+			'mediaFileKey': mediaFile.key,
+			'uploadedTimestamp': time.time(),
+			'uploadedByKey': user.key})
+		key = self.cMedia.insert(info)
+		info['_id'] = key
+		with self.lock:
+			self._media[key] = MongoMedia(self, info)
+			if len(self._media) == 1:
+				self.got_media_event()
+		self.on_keys_changed()
+		self.on_changed()
+	
+	def _unlink_media(self, media):
+		with self.lock:
+			del(self._media[media.key])
+		self.cMedia.remove({'_id': media.key})
+		self.db.on_keys_changed()
+		self.on_changed()
+	
+	def _save_media(self, media):
+		self.db.save(media.to_dict())
 		self.on_changed()
 
 class MongoMediaStore(MediaStore):
@@ -111,3 +241,53 @@ class MongoMediaStore(MediaStore):
 				self.keysCond.wait()
 			return tuple(self._keys)
 
+class MongoHistory(History):
+	def __init__(self, settings, logger):
+		super(MongoHistory, self).__init__(settings, logger)
+		self.db.on_changed.register(self._on_db_changed)
+	
+	def _on_db_changed(self):
+		if not db.ready:
+			return
+		self.cHistory = self.db.db['history']
+		self.on_pretty_changed()
+	
+	def record(self, media, request, at):
+		self.l.info(repr(media if request is None else request))
+		info = {'mediaKey': media.key,
+			'byKey': None if request is None else request.by.key,
+			'at':  time.mktime(at.timetuple())}
+		info['key'] = self.cHistory.insert(info)
+		self.on_record(MongoPastRequest(self, info))
+	
+	def list_past_requests(self):
+		for tmp in self.cHistory.find():
+			yield MongoPastRequest(self, tmp)
+
+class MongoUsers(Users):
+        def assert_request(self, user, media):
+                if not user.has_access:
+                        raise Denied
+                requests = self.queue.requests
+                if any(map(lambda x: x.media == media, requests)):
+                        raise AlreadyInQueueError
+                ureqs = filter(lambda y: y.by == user, requests)
+                if len(ureqs) > self.maxQueueCount:
+                        raise MaxQueueCountExceededError
+                if (sum(map(lambda x: x.media.length, ureqs)) >
+                                self.maxQueueLength):
+                        raise MaxQueueLengthExceededError
+        def assert_addition(self, user, mediaFile):
+                pass
+        def assert_cancel(self, user, request):
+                if request.by == user:
+                        return
+                if not user.may_cancel:
+                        raise Denied
+        def assert_move(self, user, request, amount):
+                if request.by == user and amount < 0:
+                        return
+                if not user.may_move:
+                        raise Denied
+        def by_key(self, key):
+                return self.collection.user_by_key(key)
