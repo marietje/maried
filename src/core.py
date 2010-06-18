@@ -1,5 +1,6 @@
 from __future__ import with_statement
 import os
+import random
 import logging
 import datetime
 import tempfile
@@ -349,6 +350,32 @@ class Random(Module):
 		raise NotImplementedError
 	def _handle_history_pretty_changed(self):
 		raise NotImplementedError
+
+class SimpleRandom(Random):
+	def __init__(self, settings, logger):
+		super(SimpleRandom, self).__init__(settings, logger)
+		self.collection.on_keys_changed.register(
+				self.on_collection_keys_changed)
+		self.on_collection_keys_changed()
+	
+	def on_collection_keys_changed(self):
+		self.keys = self.collection.media_keys
+		if len(self.keys) > 0:
+			self.on_ready()
+
+	def pick(self):
+		if len(self.keys) == 0:
+			return None
+		key = self.keys[random.randint(0, len(self.keys) - 1)]
+		return self.collection.by_key(key)
+
+	def _handle_history_record(self, pr):
+		pass
+	def _handle_history_pretty_changed(self):
+		pass
+	@property
+	def ready(self):
+		return len(self.keys) > 0
 
 class MediaInfo(Module):
 	def get_info(self, stream):

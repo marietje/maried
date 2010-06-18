@@ -47,9 +47,6 @@ definitions:
     settings:
       db: {type: classicDb}
       collection: {type: classicCollection }
-  classicRandom:
-    implementedBy: maried.classic.ClassicRandom
-    inherits: [random]
   classicRequestServer:
     implementedBy: maried.classic.ClassicRequestServer
     inherits: [requestServer,tcpSocketServer]

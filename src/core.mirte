@@ -56,6 +56,9 @@ definitions:
     settings:
       collection: {type: collection}
       history: {type: history}
+  simpleRandom:
+    implementedBy: maried.core.SimpleRandom
+    inherits: [random]
   requestServer:
     implementedBy: maried.core.RequestServer
     run: true
