@@ -224,6 +224,8 @@ class Queue(Module):
 			return reversed(self.list)
 	def shift(self):
 		with self.lock:
+			if not self.list:
+				raise EmptyQueueException
 			return self.list.pop()
 	def cancel(self, request):
 		with self.lock:
