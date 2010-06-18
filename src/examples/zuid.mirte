@@ -1,6 +1,5 @@
 # Base configuration of marietje zuid
 includes:
-  - maried/classic
   - maried/gstreamer
   - sarah/log
   - sarah/shell
@@ -8,27 +7,24 @@ includes:
   - maried/mongo
   - maried/comet
 instances:
-  classicDb:
-    module: classicDb
-    db: marietje
   collection:
-    module: classicCollection
-    db: classicDb
+    module: mongoCollection
+    db: mongoDb
   desk:
-    module: classicDesk
+    module: desk
     queue: amalgamatedQueue
     collection: collection
     mediaStore: mediaStore
     orchestrator: orchestrator
     users: users
   history:
-    module: classicHistory
+    module: mongoHistory
     collection: collection
-    db: classicDb
+    db: mongoDb
   mediaInfo:
     module: gstMediaInfo
   orchestrator:
-    module: classicOrchestrator
+    module: orchestrator
   randomQueue:
     module: randomQueue
     random: random
@@ -39,17 +35,13 @@ instances:
     first: queue
     second: randomQueue
   queue:
-    module: classicQueue
-    db: classicDb
-    collection: collection
+    module: queue
   random:
-    module: classicRandom
+    module: simpleRandom
     collection: collection
-  screen:
-    module: classicScreen
-    desk: desk
   users:
-    module: classicUsers
+    module: mongoUsers
+    db: mongoDb
   shellServer:
     module: shellServer
   logServer:
