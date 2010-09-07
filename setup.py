@@ -16,5 +16,4 @@ setup(name='maried',
       install_requires = ['docutils>=0.3',
 			  'mirte>=0.1.0a1',
 			  'sarah>=0.1.0a1'],
-      setup_requires = ['get_git_version>=0.1.0'],
       )
