@@ -138,8 +138,8 @@ class ClassicQueue(Queue):
 		raise NotImplementedError
 
 class ClassicHistory(History):
-	def __init__(self, settings, logger):
-		super(ClassicHistory, self).__init__(settings, logger)
+	def __init__(self, *args, **kwargs):
+		super(ClassicHistory, self).__init__(*args, **kwargs)
 		self.db.on_changed.register(self._on_db_changed)
 	
 	def _on_db_changed(self):
@@ -351,8 +351,8 @@ class ClassicRequestServer(TCPSocketServer):
 			self.LAR_count = len(media_l)
 			self.LAR_cond.notifyAll()
 
-	def __init__(self, settings, logger):
-		super(ClassicRequestServer, self).__init__(settings, logger)
+	def __init__(self, *args, **kwargs):
+		super(ClassicRequestServer, self).__init__(*args, **kwargs)
 		self.desk.on_media_changed.register(
 				self._on_media_changed)
 		self.LAR_cond = threading.Condition()
@@ -364,8 +364,8 @@ class ClassicRequestServer(TCPSocketServer):
 		return ClassicRequestServer.Handler(self, con, addr, logger)
 
 class ClassicScreen(Module):
-	def __init__(self, settings, logger):
-		super(ClassicScreen, self).__init__(settings, logger)
+	def __init__(self, *args, **kwargs):
+		super(ClassicScreen, self).__init__(*args, **kwargs)
 		self.desk.on_playing_changed.register(self._on_playing_changed)
 		self.cond = threading.Condition()
 		self.running = True
@@ -392,8 +392,8 @@ class ClassicScreen(Module):
 	
 
 class DummyPlayer(Player):
-	def __init__(self, settings, logger):
-		super(DummyPlayer, self).__init__(settings, logger)
+	def __init__(self, *args, **kwargs):
+		super(DummyPlayer, self).__init__(*args, **kwargs)
 		self._sleep_socket = socket.socketpair()
 	def stop(self):
 		self._sleep_socket[0].send('good morning!')
@@ -432,8 +432,8 @@ class ClassicMediaInfo(MediaInfo):
 			'length': 	length}
 
 class ClassicMediaStore(MediaStore):
-	def __init__(self, settings, logger):
-		super(ClassicMediaStore, self).__init__(settings, logger)
+	def __init__(self, *args, **kwargs):
+		super(ClassicMediaStore, self).__init__(*args, **kwargs)
 		self.register_on_setting_changed('path', self.osc_path)
 		self.osc_path()
 		self._keys = None
@@ -503,8 +503,8 @@ class ClassicMediaStore(MediaStore):
 			return tuple(self._keys)
 
 class ClassicCollection(Collection):
-	def __init__(self, settings, logger):
-		super(ClassicCollection, self).__init__(settings, logger)
+	def __init__(self, *args, **kwargs):
+		super(ClassicCollection, self).__init__(*args, **kwargs)
 		self._media = None
 		# notice on locking;
 		#  we assume self._media won't turn into None and that wrong
@@ -619,8 +619,8 @@ class ClassicDb(Module):
 			self.__dict__['__cursor'] = self.__dict__['__cdb'].conn.cursor() 
 			return self.__dict__['__cursor'].execute(*args, **kwargs)
 	
-	def __init__(self, settings, logger):
-		super(ClassicDb, self).__init__(settings, logger)
+	def __init__(self, *args, **kwargs):
+		super(ClassicDb, self).__init__(*args, **kwargs)
 		self.local = threading.local()
 		self.on_changed = Event()
 		self.creds_ok = False

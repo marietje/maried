@@ -146,8 +146,8 @@ class AjaxServerHandler(BaseHTTPRequestHandler):
 		self.wfile.write(doc.toprettyxml(indent="  "))	
 
 class AjaxServer(TCPSocketServer):
-	def __init__(self, settings, logger):
-		super(AjaxServer, self).__init__(settings, logger)
+	def __init__(self, *args, **kwargs):
+		super(AjaxServer, self).__init__(*args, **kwargs)
 		self.MR = None
 		self.MR_cond = threading.Condition()
 		self.desk.on_media_changed.register(

@@ -82,8 +82,8 @@ class User(DictLike):
 		return self.key != other.key
 
 class Desk(Module):
-	def __init__(self, settings, logger):
-		super(Desk, self).__init__(settings, logger)
+	def __init__(self, *args, **kwargs):
+		super(Desk, self).__init__(*args, **kwargs)
 		self.on_playing_changed = Event()
 		self.on_media_changed = Event()
 		self.orchestrator.on_playing_changed.register(
@@ -123,8 +123,8 @@ class Desk(Module):
 		return self.collection.by_key(key)
 
 class History(Module):
-	def __init__(self, settings, logger):
-		super(History, self).__init__(settings, logger)
+	def __init__(self, *args, **kwargs):
+		super(History, self).__init__(*args, **kwargs)
 		# when a record is added runtime
 		self.on_record = Event()
 		# when the whole history is changed (db change, et al)
@@ -149,8 +149,8 @@ class Users(Module):
 		return NotImplementedError
 
 class RandomQueue(Module):
-	def __init__(self, settings, logger):
-		super(RandomQueue, self).__init__(settings, logger)
+	def __init__(self, *args, **kwargs):
+		super(RandomQueue, self).__init__(*args, **kwargs)
 		self.list = list()
 		self.register_on_setting_changed('length', self.osc_length)
 		self.osc_length()
@@ -189,8 +189,8 @@ class RandomQueue(Module):
 			self.list = self.list[:self.length]
 
 class AmalgamatedQueue(Module):
-	def __init__(self, settings, logger):
-		super(AmalgamatedQueue, self).__init__(settings, logger)
+	def __init__(self, *args, **kwargs):
+		super(AmalgamatedQueue, self).__init__(*args, **kwargs)
 	def request(self, media, user):
 		self.first.request(media, user)
 	@property
@@ -211,8 +211,8 @@ class AmalgamatedQueue(Module):
 			self.second.move(request, amount)
 
 class Queue(Module):
-	def __init__(self, settings, logger):
-		super(Queue, self).__init__(settings, logger)
+	def __init__(self, *args, **kwargs):
+		super(Queue, self).__init__(*args, **kwargs)
 		self.list = list()
 		self.lock = threading.Lock()
 	def request(self, media, user):
@@ -242,8 +242,8 @@ class Queue(Module):
 			self.list = n if amount == aa else reversed(n)
 
 class Orchestrator(Module):
-	def __init__(self, settings, logger):
-		super(Orchestrator, self).__init__(settings, logger)
+	def __init__(self, *args, **kwargs):
+		super(Orchestrator, self).__init__(*args, **kwargs)
 		self.on_playing_changed = Event()
 		self.lock = threading.Lock()
 		self.playing_media = None
@@ -304,8 +304,8 @@ class Orchestrator(Module):
 		self.l.info("Woke!")
 
 class Random(Module):
-	def __init__(self, settings, logger):
-		super(Random, self).__init__(settings, logger)
+	def __init__(self, *args, **kwargs):
+		super(Random, self).__init__(*args, **kwargs)
 		self.cond = threading.Condition()
 		self.running = True
 		# used to push new PastRequest s to the worker thread
@@ -354,8 +354,8 @@ class Random(Module):
 		raise NotImplementedError
 
 class SimpleRandom(Random):
-	def __init__(self, settings, logger):
-		super(SimpleRandom, self).__init__(settings, logger)
+	def __init__(self, *args, **kwargs):
+		super(SimpleRandom, self).__init__(*args, **kwargs)
 		self.collection.on_keys_changed.register(
 				self.on_collection_keys_changed)
 		self.on_collection_keys_changed()
@@ -396,8 +396,8 @@ class MediaStore(Module):
 		raise NotImplementedError
 
 class Player(Module):
-	def __init__(self, settings, logger):
-		super(Player, self).__init__(settings, logger)
+	def __init__(self, *args, **kwargs):
+		super(Player, self).__init__(*args, **kwargs)
 		self.endTime = None
 	def stop(self):
 		raise NotImplementedError
@@ -405,8 +405,8 @@ class Player(Module):
 		raise NotImplementedError
 
 class Collection(Module):
-	def __init__(self, settings, logger):
-		super(Collection, self).__init__(settings, logger)
+	def __init__(self, *args, **kwargs):
+		super(Collection, self).__init__(*args, **kwargs)
 		self.on_keys_changed = Event()
 		self.on_changed = Event()
 		# got_media_event is set when the Collection isn't

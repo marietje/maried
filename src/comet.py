@@ -24,13 +24,14 @@ class MariedCometSession(BaseCometSession):
 
 
 class MariedCometServer(CometServer):
-	def __init__(self, settings, logger):
-		super(MariedCometServer, self).__init__(settings, logger,
-				MariedCometSession)
+	def __init__(self, *args, **kwargs):
+		super(MariedCometServer, self).__init__(*args, **kwargs)
 		self.desk.on_media_changed.register(
 				self._on_media_changed)
 		self.desk.on_playing_changed.register(
 				self._on_playing_changed)
+	def create_session(self, token):
+		return MariedCometSession(self, token)
 	def _on_media_changed(self):
 		self.send_message({'type': 'collection_changed'})
 	def _get_playing(self):

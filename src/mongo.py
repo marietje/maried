@@ -67,8 +67,8 @@ class MongoRequest(AliasingMixin, PastRequest):
 
 
 class MongoDb(Module):
-	def __init__(self, settings, logger):
-		super(MongoDb, self).__init__(settings, logger)
+	def __init__(self, *args, **kwargs):
+		super(MongoDb, self).__init__(*args, **kwargs)
 		self.register_on_setting_changed('host', self.osc_creds)
 		self.register_on_setting_changed('port', self.osc_creds)
 		self.register_on_setting_changed('db', self.osc_creds)
@@ -85,8 +85,8 @@ class MongoDb(Module):
 		self.on_changed()
 
 class MongoCollection(Collection):
-	def __init__(self, settings, logger):
-		super(MongoCollection, self).__init__(settings, logger)
+	def __init__(self, *args, **kwargs):
+		super(MongoCollection, self).__init__(*args, **kwargs)
 		self._media = None
 		self.lock = threading.Lock()
 		self.register_on_setting_changed('db', self.osc_db)
@@ -168,8 +168,8 @@ class MongoCollection(Collection):
 		self.on_changed()
 
 class MongoMediaStore(MediaStore):
-	def __init__(self, settings, logger):
-		super(MongoMediaStore, self).__init__(settings, logger)
+	def __init__(self, *args, **kwargs):
+		super(MongoMediaStore, self).__init__(*args, **kwargs)
 		self.db.on_changed.register(self.on_db_changed)
 		self.ready = False
 		self.keysCond = threading.Condition()
@@ -242,8 +242,8 @@ class MongoMediaStore(MediaStore):
 			return tuple(self._keys)
 
 class MongoHistory(History):
-	def __init__(self, settings, logger):
-		super(MongoHistory, self).__init__(settings, logger)
+	def __init__(self, *args, **kwargs):
+		super(MongoHistory, self).__init__(*args, **kwargs)
 		self.db.on_changed.register(self._on_db_changed)
 	
 	def _on_db_changed(self):

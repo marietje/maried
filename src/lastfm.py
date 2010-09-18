@@ -5,8 +5,8 @@ import scrobbler
 import time
 
 class Scrobbler(Module):
-	def __init__(self, settings, logger):
-		super(Scrobbler, self).__init__(settings, logger)
+	def __init__(self, *args, **kwargs):
+		super(Scrobbler, self).__init__(*args, **kwargs)
 		self.desk.on_playing_changed.register(self._on_playing_changed)
 		self.register_on_setting_changed('username', self.osc_creds)
 		self.register_on_setting_changed('password', self.osc_creds)

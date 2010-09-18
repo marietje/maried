@@ -99,8 +99,8 @@ class GstMediaInfo(MediaInfo):
 			del(self.bin)
 			del(self.bus)
 	
-	def __init__(self, settings, logger):
-		super(GstMediaInfo, self).__init__(settings, logger)
+	def __init__(self, *args, **kwargs):
+		super(GstMediaInfo, self).__init__(*args, **kwargs)
 		self.lock = threading.Lock()
 		self.jobs = set()
 	
@@ -137,8 +137,8 @@ class GstMediaInfo(MediaInfo):
 		return j.result
 
 class GstPlayer(Player):
-	def __init__(self, settings, logger):
-		super(GstPlayer, self).__init__(settings, logger)
+	def __init__(self, *args, **kwargs):
+		super(GstPlayer, self).__init__(*args, **kwargs)
 		self.bin = gst.element_factory_make('playbin', 'playbin')
 		self.bin2 = gst.element_factory_make('bin', 'bin')
 		self.ac = gst.element_factory_make('audioconvert',
