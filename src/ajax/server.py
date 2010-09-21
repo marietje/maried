@@ -159,7 +159,8 @@ class AjaxServer(TCPSocketServer):
 			self.l.error("%s doens't exist!" % self.htdocs_path)
 		self.on_media_changed()
 	def on_media_changed(self):
-		self.threadPool.execute(self.do_refresh_MR)
+		self.threadPool.execute_named(self.do_refresh_MR,
+				'%s do_refresh_MR' % self.name)
 	def do_refresh_MR(self):
 		self.l.info("Refreshing cached /media response")
 		self.l.info

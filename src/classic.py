@@ -331,7 +331,8 @@ class ClassicRequestServer(TCPSocketServer):
 			self.f.interrupt()
 	
 	def _on_media_changed(self):
-		self.threadPool.execute(self._do_refresh_LAR)
+		self.threadPool.execute_named(self._do_refresh_LAR,
+				'%s _do_refresh_LAR' % self.name)
 
 	def _do_refresh_LAR(self):
 		self.l.debug("Refreshing LIST::ALL response")
@@ -445,7 +446,8 @@ class ClassicMediaStore(MediaStore):
 	def _refresh_keys(self):
 		if not hasattr(self, 'path'):
 			return
-		self.threadPool.execute(self._do_refresh_keys)
+		self.threadPool.execute_name(self._do_refresh_keys,
+				'%s _do_refresh_jeys' % self.name)
 	
 	def _do_refresh_keys(self):
 		with self.keysCond:
