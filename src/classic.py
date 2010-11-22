@@ -621,8 +621,8 @@ class ClassicDb(Module):
 			self.__dict__['__cursor'] = self.__dict__['__cdb'].conn.cursor() 
 			return self.__dict__['__cursor'].execute(*args, **kwargs)
 	
-	def __init__(self, *args, **kwargs):
-		super(ClassicDb, self).__init__(*args, **kwargs)
+	def __init__(self, settings, *args, **kwargs):
+		super(ClassicDb, self).__init__(settings, *args, **kwargs)
 		self.local = threading.local()
 		self.on_changed = Event()
 		self.creds_ok = False
