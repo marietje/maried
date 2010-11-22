@@ -447,7 +447,7 @@ class ClassicMediaStore(MediaStore):
 		if not hasattr(self, 'path'):
 			return
 		self.threadPool.execute_named(self._do_refresh_keys,
-				'%s _do_refresh_jeys' % self.name)
+				'%s _do_refresh_jeys' % self.l.name)
 	
 	def _do_refresh_keys(self):
 		with self.keysCond:
