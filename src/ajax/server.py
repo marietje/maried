@@ -160,7 +160,7 @@ class AjaxServer(TCPSocketServer):
 		self.on_media_changed()
 	def on_media_changed(self):
 		self.threadPool.execute_named(self.do_refresh_MR,
-				'%s do_refresh_MR' % self.name)
+				'%s do_refresh_MR' % self.l.name)
 	def do_refresh_MR(self):
 		self.l.info("Refreshing cached /media response")
 		self.l.info
