@@ -332,7 +332,7 @@ class ClassicRequestServer(TCPSocketServer):
 	
 	def _on_media_changed(self):
 		self.threadPool.execute_named(self._do_refresh_LAR,
-				'%s _do_refresh_LAR' % self.name)
+				'%s _do_refresh_LAR' % self.l.name)
 
 	def _do_refresh_LAR(self):
 		self.l.debug("Refreshing LIST::ALL response")
