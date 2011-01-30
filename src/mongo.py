@@ -181,7 +181,7 @@ class MongoMediaStore(MediaStore):
 			return
 		self.fs = gridfs.GridFS(self.db.db, self.collection)
 		self.threadPool.execute_named(self._do_refresh_keys,
-				'%s _do_refresh_keys' % self.name)
+				'%s _do_refresh_keys' % self.l.name)
 	
 	def _do_refresh_keys(self):
 		with self.keysCond:

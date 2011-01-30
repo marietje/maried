@@ -1,6 +1,6 @@
 from mirte.core import Module
 from sarah.event import Event
-from sarah.comet.server import CometServer, BaseCometSession
+from joyce.comet.server import CometServer, BaseCometSession
 
 import time
 import maried

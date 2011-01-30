@@ -1,9 +1,9 @@
 includes:
   - core
-  - sarah/comet
+  - joyce/comet
 definitions:
   mariedCometServer:
     implementedBy: maried.comet.MariedCometServer
-    inherits: [ cometServer ]
+    inherits: [ cometJoyceServer ]
     settings:
       desk: {type: desk}
