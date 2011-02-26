@@ -1,11 +1,14 @@
 from mirte.core import Module
 from sarah.event import Event
-from joyce.comet.server import CometServer, BaseCometSession
+from joyce.base import JoyceChannel
 
 import time
 import maried
 
-class MariedCometSession(BaseCometSession):
+class MariedChannelClass(JoyceChannel):
+	def __init__(self, mserver, *args, **kwargs):
+		super(MariedChannelClass, self).__init__(*args, **kwargs)
+
 	def handle_message(self, data):
 		if data['type'] == 'get_playing':
 			t = self.server._get_playing()
@@ -23,15 +26,16 @@ class MariedCometSession(BaseCometSession):
 					in self.server.desk.list_requests()]})
 
 
-class MariedCometServer(CometServer):
+class MariedJoyceRS(Module):
 	def __init__(self, *args, **kwargs):
-		super(MariedCometServer, self).__init__(*args, **kwargs)
+		super(MariedJoyceRS, self).__init__(*args, **kwargs)
+		self.joyceServer.channel_class = self._channel_constructor
 		self.desk.on_media_changed.register(
 				self._on_media_changed)
 		self.desk.on_playing_changed.register(
 				self._on_playing_changed)
-	def create_session(self, token):
-		return MariedCometSession(self, token)
+	def _channel_constructor(self, *args, **kwargs):
+		return MariedChannelClass(self, *args, **kwargs)
 	def _on_media_changed(self):
 		self.send_message({'type': 'collection_changed'})
 	def _get_playing(self):

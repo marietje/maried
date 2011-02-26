@@ -1,9 +1,0 @@
-includes:
-  - core
-  - joyce/comet
-definitions:
-  mariedCometServer:
-    implementedBy: maried.comet.MariedCometServer
-    inherits: [ cometJoyceServer ]
-    settings:
-      desk: {type: desk}

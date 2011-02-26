@@ -5,7 +5,8 @@ includes:
   - sarah/shell
   - maried/lastfm
   - maried/mongo
-  - maried/comet
+  - maried/joyceRS
+  - joyce/comet
 instances:
   collection:
     module: mongoCollection
@@ -51,6 +52,9 @@ instances:
   mediaStore:
     module: mongoMediaStore
     db: mongoDb
-  cometServer:
-    module: mariedCometServer
+  requestServer::
+    module: mariedJoyceRS
     desk: desk
+    joyceServer: cometServer
+  cometServer:
+    module: cometJoyceServer
