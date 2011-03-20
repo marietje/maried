@@ -13,6 +13,7 @@ definitions:
   gstPlayer:
     implementedBy: maried.gstreamer.GstPlayer
     inherits: [player]
+    run: true
     settings:
       gtkMainLoop: {type: gtkMainLoop}
       threadPool: {type: threadPool}

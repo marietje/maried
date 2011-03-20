@@ -1,11 +1,10 @@
 from __future__ import with_statement
 
-import gst
-import gtk
+# gtk, gst, gobject and pygst are imported in GtkMainLoop.run
+gtk, gst, gobject, pygst = None, None, None, None
+
 import time
-import pygst
 import os.path
-import gobject
 import datetime
 import threading
 
@@ -15,9 +14,21 @@ from sarah.event import Event
 from sarah.io import SocketPairWrappedFile
 
 class GtkMainLoop(Module):
+        def __init__(self, *args, **kwargs):
+                super(GtkMainLoop, self).__init__(*args, **kwargs)
+                self.ready = threading.Event()
 	def run(self):
+                self.do_imports()
 		gtk.gdk.threads_init()
+                self.ready.set()
 		gtk.main()
+        def do_imports(self):
+                global gtk, gst, gobject, pygst
+                import gtk as _gtk
+                import gst as _gst
+                import gobject as _gobject
+                import pygst as _pygst
+                gtk, gst, gobject, pygst = _gtk, _gst, _gobject, _pygst
 	def stop(self):
 		gtk.main_quit()
 
@@ -141,6 +152,12 @@ class GstMediaInfo(MediaInfo):
 class GstPlayer(Player):
 	def __init__(self, *args, **kwargs):
 		super(GstPlayer, self).__init__(*args, **kwargs)
+
+        def run(self):
+                self._intialize()
+
+        def _intialize(self):
+                self.gtkMainLoop.ready.wait()
 		self.bin = gst.element_factory_make('playbin', 'playbin')
 		self.bin2 = gst.element_factory_make('bin', 'bin')
 		self.ac = gst.element_factory_make('audioconvert',
