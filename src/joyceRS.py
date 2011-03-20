@@ -26,9 +26,9 @@ class MariedChannelClass(JoyceChannel):
 					in self.server.desk.list_requests()]})
 
 
-class MariedJoyceRS(Module):
+class JoyceRS(Module):
 	def __init__(self, *args, **kwargs):
-		super(MariedJoyceRS, self).__init__(*args, **kwargs)
+		super(JoyceRS, self).__init__(*args, **kwargs)
 		self.joyceServer.channel_class = self._channel_constructor
 		self.desk.on_media_changed.register(
 				self._on_media_changed)

@@ -2,8 +2,8 @@ includes:
   - core
   - joyce
 definitions:
-  mariedJoyceRS:
-    implementedBy: maried.joyceRS.MariedJoyceRS
+  joyceRS:
+    implementedBy: maried.joyceRS.JoyceRS
     inherits: [ requestServer ]
     run: false
     settings:
