@@ -8,6 +8,8 @@ includes:
   - maried/joyceRS
   - joyce/comet
 instances:
+  threadPool:
+    min: 10
   collection:
     module: mongoCollection
     db: mongoDb
