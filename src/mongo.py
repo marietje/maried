@@ -141,7 +141,7 @@ class MongoCollection(Collection):
 
 	def add(self, mediaFile, user, extraInfo=None):
 		info = mediaFile.get_info()
-		if not info is None:
+		if not extraInfo is None:
 			info.update(extraInfo)
 		info.update({
 			'mediaFileKey': mediaFile.key,
