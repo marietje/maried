@@ -1,14 +1,36 @@
+import os
+import time
+import base64
+import hashlib
+
+import maried
+
 from mirte.core import Module
 from sarah.event import Event
 from joyce.base import JoyceChannel
 
-import time
-import maried
 
 class MariedChannelClass(JoyceChannel):
 	def __init__(self, server, *args, **kwargs):
 		super(MariedChannelClass, self).__init__(*args, **kwargs)
                 self.server = server
+                self.user = None
+                self.login_token = None
+                self.send_message({
+                        'type': 'welcome',
+                        'protocols': [0],
+                        'note': 'The API is not stable'})
+
+        def handle_stream(self, stream):
+                if self.user is None:
+                        stream.close()
+                        self.send_message({
+                                'type': 'error_upload',
+                                'message': 'Please log in before uploading'})
+                        return
+                self.l.info('Download started')
+                mf = self.server.desk.add_media(stream, None)
+                self.l.info('Download finished: ' + repr(mf))
 
 	def handle_message(self, data):
 		if data['type'] == 'get_playing':
@@ -25,7 +47,36 @@ class MariedChannelClass(JoyceChannel):
 				'type': 'requests',
 				'requests': [r.to_dict() for r
 					in self.server.desk.list_requests()]})
-
+                elif data['type'] == 'request_login_token':
+                        self.login_token = base64.b64encode(os.urandom(6))
+                        self.send_message({
+                                'type': 'login_token',
+                                'login_token': self.login_token})
+                elif data['type'] == 'login':
+                        if ('username' not in data or
+                            'hash' not in data):
+                                self.send_message({
+                                        'type': 'error_login',
+                                        'message': 'Expected user and hash'})
+                                return
+                        try:
+                                user = self.server.desk.user_by_key(
+                                                data['username'])
+                        except KeyError:
+                                self.send_message({
+                                        'type': 'error_login',
+                                        'message': 'User does not exist'})
+                                return
+                        expected_hash = hashlib.md5(user.passwordHash +
+                                                self.login_token).hexdigest()
+                        if expected_hash != data['hash']:
+                                self.send_message({
+                                        'type': 'error_login',
+                                        'message': 'Wrong password'})
+                                return
+                        self.user = user
+                        self.send_message({
+                                'type': 'logged_in'})
 
 class JoyceRS(Module):
 	def __init__(self, *args, **kwargs):
@@ -38,7 +89,7 @@ class JoyceRS(Module):
 	def _channel_constructor(self, *args, **kwargs):
 		return MariedChannelClass(self, *args, **kwargs)
 	def _on_media_changed(self):
-		self.send_message({'type': 'collection_changed'})
+		self.broadcast_message({'type': 'collection_changed'})
 	def _get_playing(self):
 		playing = self.desk.get_playing()
 		by = None if playing[1] is None else playing[1].to_dict()
@@ -52,5 +103,5 @@ class JoyceRS(Module):
 	def _on_playing_changed(self, previous_playing):
 		t = self._get_playing()
 		t['type'] = 'playing_changed'
-		self.send_message(t)
+		self.broadcast_message(t)
 
