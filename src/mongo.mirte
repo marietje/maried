@@ -29,4 +29,5 @@ definitions:
     inherits: [users]
     settings:
       db: {type: mongoDb}
+      collection: {type: mongoCollection}
 

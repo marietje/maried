@@ -29,7 +29,7 @@ class MongoUser(AliasingMixin, User):
 		   'passwordHash': 'p'}
 	def __init__(self, coll, data):
 		super(MongoUser, self).__init__(self.normalize_dict(data))
-		self.self.collection = coll
+		self.collection = coll
 	@property
         def has_access(self):
                 return self.level >= 2
@@ -292,4 +292,4 @@ class MongoUsers(Users):
                 if not user.may_move:
                         raise Denied
         def by_key(self, key):
-                return self.collection.user_by_key(key)
+                return self.collection._user_by_key(key)
