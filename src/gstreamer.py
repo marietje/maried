@@ -123,7 +123,7 @@ class GstMediaInfo(MediaInfo):
 			wrapper = SocketPairWrappedFile(stream)
 			uri = 'fd://%s' % wrapper.fileno()
 			self.threadPool.execute_named(wrapper.run,
-					'%s wrapper.run %s' % (self.name,
+					'%s wrapper.run %s' % (self.l.name,
 						wrapper.fileno()))
 		j = GstMediaInfo.Job(self, uri)
 		with self.lock:
@@ -218,7 +218,7 @@ class GstPlayer(Player):
 		else:
 			wrapper = SocketPairWrappedFile(stream)
 			self.threadPool.execute_named(wrapper.run,
-				'%s wrapper.run %s' % (self.name,
+				'%s wrapper.run %s' % (self.l.name,
 					wrapper.fileno()))
 			uri = 'fd://%s'%wrapper.fileno()
 		self.bin.set_property('uri', uri)
