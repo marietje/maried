@@ -6,8 +6,9 @@ import time
 import maried
 
 class MariedChannelClass(JoyceChannel):
-	def __init__(self, mserver, *args, **kwargs):
+	def __init__(self, server, *args, **kwargs):
 		super(MariedChannelClass, self).__init__(*args, **kwargs)
+                self.server = server
 
 	def handle_message(self, data):
 		if data['type'] == 'get_playing':
