@@ -29,7 +29,7 @@ class MariedChannelClass(JoyceChannel):
                                 'message': 'Please log in before uploading'})
                         return
                 self.l.info('Download started')
-                mf = self.server.desk.add_media(stream, None)
+                mf = self.server.desk.add_media(stream, self.user)
                 self.l.info('Download finished: ' + repr(mf))
 
 	def handle_message(self, data):
