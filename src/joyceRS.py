@@ -110,13 +110,12 @@ class JoyceRS(Module):
                         'type': 'collection_changed'})
 	def _get_playing(self):
 		playing = self.desk.get_playing()
-		by = None if playing[1] is None else playing[1].to_dict()
-		media = None if playing[0] is None else playing[0].to_dict()
-		endTime = (time.mktime(playing[2].timetuple()) if
-				not playing[2] is None else None)
-		return {'media': None,
-			'requestedBy': None,
-			'endTime': endTime}
+                return {'mediaKey': None if playing[0] is None
+                                else str(playing[0].key),
+                        'byKey': None if playing[1] is None
+                                else str(playing[1].key),
+                        'endTime': (time.mktime(playing[2].timetuple()) if
+                                not playing[2] is None else None)}
 
 	def _on_playing_changed(self, previous_playing):
 		t = self._get_playing()
