@@ -76,6 +76,12 @@ class Request(BaseRequest):
         @property
         def mediaKey(self):
                 return self.media.key
+        @property
+        def byKey(self):
+                try:
+                        return self.by.key
+                except AttributeError:
+                        return None
 class User(DictLike):
 	def has_access(self):
 		raise NotImplementedError

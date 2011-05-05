@@ -59,8 +59,8 @@ class MariedChannelClass(JoyceChannel):
 			self.send_message({
 				'type': 'requests',
 				'requests': [{
-                                                'key': str(r.key),
-                                                'byKey': str(r.byKey),
+                                                'byKey': None if r.byKey is None
+                                                        else str(r.byKey),
                                                 'mediaKey': str(r.mediaKey)
                                              } for r
                                         in self.server.desk.list_requests()]})
