@@ -138,6 +138,10 @@ class MongoCollection(Collection):
 			return list()
 		return self._media.keys()
 
+        @property
+        def media_count(self):
+                return len(self._media)
+
 	def by_key(self, key):
 		return self._media[key]
 

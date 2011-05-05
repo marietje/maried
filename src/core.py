@@ -96,6 +96,10 @@ class Desk(Module):
 		self.on_media_changed()
 	def list_media(self):
 		return self.collection.media
+	def list_media_keys(self):
+		return self.collection.media_keys
+        def get_media_count(self):
+                return self.collection.media_count
 	def request_media(self, media, user):
 		self.users.assert_request(user, media)
 		self.queue.request(media, user)
