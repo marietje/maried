@@ -73,6 +73,9 @@ class Request(BaseRequest):
 		self.queue.move(self, amount)
 	def cancel(self):
 		self.queue.cancel(self)
+        @property
+        def mediaKey(self):
+                return self.media.key
 class User(DictLike):
 	def has_access(self):
 		raise NotImplementedError
