@@ -7,6 +7,7 @@ import maried
 
 from mirte.core import Module
 from sarah.event import Event
+from sarah._itertools import iter_by_n
 from joyce.base import JoyceChannel
 
 
@@ -38,15 +39,31 @@ class MariedChannelClass(JoyceChannel):
 			t['type'] = 'playing'
 			self.send_message(t)
 		elif data['type'] == 'list_media':
-			self.send_message({
-				'type': 'media',
-				'media': [None for m
-					in self.server.desk.list_media()]})
+                        self.send_message({
+                                'type': 'media',
+                                'count': self.server.desk.get_media_count()})
+                        for ms in iter_by_n(self.server.desk.list_media(), 2):
+                                self.send_message({
+                                        'type': 'media_part',
+                                        'part': [{
+                                                'key': str(m.key),
+                                                'artist': m.artist,
+                                                'title': m.title,
+                                                'uploadedByKey':
+                                                        str(m.uploadedByKey),
+                                                'uploadedTimestamp':
+                                                        m.uploadedTimestamp,
+                                                'length': m.length}
+                                                        for m in ms]})
 		elif data['type'] == 'list_requests':
 			self.send_message({
 				'type': 'requests',
-				'requests': [r.to_dict() for r
-					in self.server.desk.list_requests()]})
+				'requests': [{
+                                                'key': str(r.key),
+                                                'byKey': str(r.byKey),
+                                                'mediaKey': str(r.mediaKey)
+                                             } for r
+                                        in self.server.desk.list_requests()]})
                 elif data['type'] == 'request_login_token':
                         self.login_token = base64.b64encode(os.urandom(6))
                         self.send_message({
