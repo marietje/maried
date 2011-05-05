@@ -154,9 +154,9 @@ class GstPlayer(Player):
 		super(GstPlayer, self).__init__(*args, **kwargs)
 
         def run(self):
-                self._intialize()
+                self._initialize()
 
-        def _intialize(self):
+        def _initialize(self):
                 self.gtkMainLoop.ready.wait()
 		self.bin = gst.element_factory_make('playbin', 'playbin')
 		self.bin2 = gst.element_factory_make('bin', 'bin')
