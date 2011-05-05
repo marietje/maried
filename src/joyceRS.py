@@ -40,7 +40,7 @@ class MariedChannelClass(JoyceChannel):
 		elif data['type'] == 'list_media':
 			self.send_message({
 				'type': 'media',
-				'media': [m.to_dict() for m
+				'media': [None for m
 					in self.server.desk.list_media()]})
 		elif data['type'] == 'list_requests':
 			self.send_message({
@@ -97,8 +97,8 @@ class JoyceRS(Module):
 		media = None if playing[0] is None else playing[0].to_dict()
 		endTime = (time.mktime(playing[2].timetuple()) if
 				not playing[2] is None else None)
-		return {'media': media,
-			'requestedBy': by,
+		return {'media': None,
+			'requestedBy': None,
 			'endTime': endTime}
 
 	def _on_playing_changed(self, previous_playing):
