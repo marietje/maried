@@ -178,10 +178,14 @@ class MongoCollection(Collection):
 class MongoMediaStore(MediaStore):
 	def __init__(self, *args, **kwargs):
 		super(MongoMediaStore, self).__init__(*args, **kwargs)
-		self.db.on_changed.register(self.on_db_changed)
 		self.ready = False
 		self.keysCond = threading.Condition()
 		self._keys = None
+		self.register_on_setting_changed('db', self.osc_db)
+                self.osc_db()
+
+	def osc_db(self):
+		self.db.on_changed.register(self.on_db_changed)
 		self.on_db_changed()
 
 	def on_db_changed(self):
@@ -253,10 +257,15 @@ class MongoMediaStore(MediaStore):
 class MongoHistory(History):
 	def __init__(self, *args, **kwargs):
 		super(MongoHistory, self).__init__(*args, **kwargs)
+		self.register_on_setting_changed('db', self.osc_db)
+		self.osc_db()
+
+        def osc_db(self):
 		self.db.on_changed.register(self._on_db_changed)
+                self._on_db_changed()
 	
 	def _on_db_changed(self):
-		if not db.ready:
+		if not self.db.ready:
 			return
 		self.cHistory = self.db.db['history']
 		self.on_pretty_changed()
