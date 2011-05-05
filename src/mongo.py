@@ -53,18 +53,25 @@ class MongoMedia(AliasingMixin, Media):
 		   'uploadedByKey': 'ub',
 		   'uploadedTimestamp': 'ut'}
 	def __init__(self, coll, data):
-		super(MongoMedia, self).__init__(self.normalize_dict(data))
+		super(MongoMedia, self).__init__(coll,
+                                self.normalize_dict(data))
 
 class MongoPastRequest(AliasingMixin, PastRequest):
 	aliases = {'key': '_id',
 		   'byKey': 'b',
 		   'at': 'a',
 		   'mediaKey': 'm'}
+	def __init__(self, history, data):
+		super(MongoPastRequest, self).__init__(history,
+                                self.normalize_dict(data))
 
 class MongoRequest(AliasingMixin, PastRequest):
 	aliases = {'key': '_id',
 		   'byKey': 'b',
 		   'mediaKey': 'm'}
+	def __init__(self, queue, data):
+		super(MongoRequest, self).__init__(queue,
+                                self.normalize_dict(data))
 
 
 class MongoDb(Module):
