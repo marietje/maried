@@ -89,7 +89,8 @@ class JoyceRS(Module):
 	def _channel_constructor(self, *args, **kwargs):
 		return MariedChannelClass(self, *args, **kwargs)
 	def _on_media_changed(self):
-		self.broadcast_message({'type': 'collection_changed'})
+		self.joyceServer.broadcast_message({
+                        'type': 'collection_changed'})
 	def _get_playing(self):
 		playing = self.desk.get_playing()
 		by = None if playing[1] is None else playing[1].to_dict()
@@ -103,5 +104,5 @@ class JoyceRS(Module):
 	def _on_playing_changed(self, previous_playing):
 		t = self._get_playing()
 		t['type'] = 'playing_changed'
-		self.broadcast_message(t)
+		self.joyceServer.broadcast_message(t)
 
