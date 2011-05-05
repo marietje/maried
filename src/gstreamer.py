@@ -152,6 +152,7 @@ class GstMediaInfo(MediaInfo):
 class GstPlayer(Player):
 	def __init__(self, *args, **kwargs):
 		super(GstPlayer, self).__init__(*args, **kwargs)
+                self.readyEvent = threading.Event()
 
         def run(self):
                 self._initialize()
@@ -183,8 +184,10 @@ class GstPlayer(Player):
 		self.idleCond = threading.Condition()
 		self.idle = True
 		self.stopped = False
+                self.readyEvent.set()
 
 	def play(self, media):
+                self.readyEvent.wait()
 		with self.idleCond:
 			if self.stopped:
 				raise Stopped
@@ -264,6 +267,7 @@ class GstPlayer(Player):
 			self._reset()
 	
 	def stop(self):
+                self.readyEvent.wait()
 		self._reset()
 		self.bus.remove_signal_watch()
 		with self.idleCond:
