@@ -2,6 +2,7 @@ import os
 import time
 import base64
 import hashlib
+import threading
 
 import maried
 
@@ -34,37 +35,12 @@ class MariedChannelClass(JoyceChannel):
                 self.l.info('Download finished: ' + repr(mf))
 
 	def handle_message(self, data):
-		if data['type'] == 'get_playing':
-                        playing = self.server._get_playing()
-			self.send_message({
-                                'type': 'playing',
-                                'playing': playing})
-		elif data['type'] == 'list_media':
-                        self.send_message({
-                                'type': 'media',
-                                'count': self.server.desk.get_media_count()})
-                        for ms in iter_by_n(self.server.desk.list_media(), 2):
-                                self.send_message({
-                                        'type': 'media_part',
-                                        'part': [{
-                                                'key': str(m.key),
-                                                'artist': m.artist,
-                                                'title': m.title,
-                                                'uploadedByKey':
-                                                        str(m.uploadedByKey),
-                                                'uploadedTimestamp':
-                                                        m.uploadedTimestamp,
-                                                'length': m.length}
-                                                        for m in ms]})
-		elif data['type'] == 'list_requests':
-			self.send_message({
-				'type': 'requests',
-				'requests': [{
-                                                'byKey': None if r.byKey is None
-                                                        else str(r.byKey),
-                                                'mediaKey': str(r.mediaKey)
-                                             } for r
-                                        in self.server.desk.list_requests()]})
+                if data['type'] == 'follow':
+                        for followed in data['which']:
+                                self.server._register_follower(self, followed)
+                elif data['type'] == 'unfollow':
+                        for followed in data['which']:
+                                self.server._unregister_follower(self, followed)
                 elif data['type'] == 'request_login_token':
                         self.login_token = base64.b64encode(os.urandom(6))
                         self.send_message({
@@ -96,6 +72,10 @@ class MariedChannelClass(JoyceChannel):
                         self.send_message({
                                 'type': 'logged_in'})
 
+        def after_close(self):
+                self.l.debug("Closed")
+                self.server._remove_follower(self)
+
 class JoyceRS(Module):
 	def __init__(self, *args, **kwargs):
 		super(JoyceRS, self).__init__(*args, **kwargs)
@@ -104,24 +84,94 @@ class JoyceRS(Module):
 				self._on_media_changed)
 		self.desk.on_playing_changed.register(
 				self._on_playing_changed)
+		self.desk.on_requests_changed.register(
+				self._on_requests_changed)
+                self.following_lut = {
+                                'requests': (set(), self._send_all_requests),
+                                'playing': (set(), self._send_playing),
+                                'media': (set(), self._send_all_media)}
+                self.lock = threading.Lock()
 	def _channel_constructor(self, *args, **kwargs):
 		return MariedChannelClass(self, *args, **kwargs)
 	def _on_media_changed(self):
-		self.joyceServer.broadcast_message({
-                        'type': 'collection_changed'})
-	def _get_playing(self):
+                for follower in self._followers_of('media'):
+		        follower.send_message({
+                                'type': 'collection_changed'})
+	def _on_requests_changed(self):
+                self._send_all_requests(self._followers_of('requests'))
+	def _on_playing_changed(self, previously_playing):
+                self._send_playing(self._followers_of('playing'))
+
+	def _send_playing(self, followers):
 		playing = self.desk.get_playing()
-                return {'mediaKey': None if playing[0] is None
+                msg = { 'type': 'playing',
+                        'playing': {
+                        'mediaKey': None if playing[0] is None
                                 else str(playing[0].key),
                         'byKey': None if playing[1] is None
                                 else str(playing[1].key),
                         'serverTime': time.time(),
                         'endTime': (time.mktime(playing[2].timetuple()) if
-                                not playing[2] is None else None)}
+                                not playing[2] is None else None)}}
+                for follower in followers:
+                        follower.send_message(msg)
 
-	def _on_playing_changed(self, previously_playing):
-		t = self._get_playing()
-		self.joyceServer.broadcast_message({
-                        'type': 'playing_changed',
-                        'playing': t })
+        def _send_all_requests(self, followers):
+                msg = {
+                        'type': 'requests',
+                        'requests': [{
+                                        'byKey': None if r.byKey is None
+                                                else str(r.byKey),
+                                        'mediaKey': str(r.mediaKey)
+                                     } for r
+                                in self.desk.list_requests()]}
+                for follower in followers:
+                        follower.send_message(msg)
+
+        def _send_all_media(self, followers):
+                for follower in followers:
+                        follower.send_message({
+                                'type': 'media',
+                                'count': self.desk.get_media_count()})
+                for ms in iter_by_n(self.desk.list_media(), 2):
+                        msg = {
+                                'type': 'media_part',
+                                'part': [{
+                                        'key': str(m.key),
+                                        'artist': m.artist,
+                                        'title': m.title,
+                                        'uploadedByKey':
+                                                str(m.uploadedByKey),
+                                        'uploadedTimestamp':
+                                                m.uploadedTimestamp,
+                                        'length': m.length}
+                                                for m in ms]}
+                        for follower in followers:
+                                follower.send_message(msg)
+
+        def _followers_of(self, followed):
+                with self.lock:
+                        return tuple(self.following_lut[followed][0])
+
+        def _register_follower(self, follower, followed):
+                with self.lock:
+                        if not followed in self.following_lut:
+                                raise KeyError
+                        self.following_lut[followed][0].add(follower)
+                        full_cb = self.following_lut[followed][1]
+                full_cb([follower])
+
+        def _unregister_follower(self, follower, followed):
+                with self.lock:
+                        if not followed in self.following_lut or \
+                                        follower not in self.following_lut[
+                                                        followed][0]:
+                                raise KeyError
+                        self.following_lut[followed][0].remove(follower)
+
+        def _remove_follower(self, follower):
+                with self.lock:
+                        for v in self.following_lut.itervalues():
+                                if follower in v[0]:
+                                        v[0].remove(follower)
 
