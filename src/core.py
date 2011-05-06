@@ -271,8 +271,9 @@ class Queue(Module):
 		with self.lock:
 			if not self.list:
 				raise EmptyQueueException
-			return self.list.pop()
+			ret = self.list.pop()
                 self.on_changed()
+                return ret
 	def cancel(self, request):
 		with self.lock:
 			self.list.remove(request)
