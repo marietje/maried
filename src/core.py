@@ -253,7 +253,9 @@ class Queue(Module):
                 self.on_changed = Event()
 	def request(self, media, user):
 		with self.lock:
-			self.list.insert(0, Request(self, media, user))
+			self.list.insert(0, Request(self, {
+                                        'media': media,
+                                        'by': user}))
                 self.on_changed()
 	@property
 	def requests(self):
