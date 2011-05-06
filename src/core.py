@@ -96,14 +96,19 @@ class Desk(Module):
 		super(Desk, self).__init__(*args, **kwargs)
 		self.on_playing_changed = Event()
 		self.on_media_changed = Event()
+		self.on_requests_changed = Event()
 		self.orchestrator.on_playing_changed.register(
 				self._on_playing_changed)
 		self.collection.on_changed.register(
 				self._on_collection_changed)
+                self.queue.on_changed.register(
+                                self._on_requests_changed)
 	def _on_playing_changed(self, previous_playing):
 		self.on_playing_changed(previous_playing)
 	def _on_collection_changed(self):
 		self.on_media_changed()
+	def _on_requests_changed(self):
+		self.on_requests_changed()
 	def list_media(self):
 		return self.collection.media
 	def list_media_keys(self):
@@ -166,6 +171,7 @@ class RandomQueue(Module):
 	def __init__(self, *args, **kwargs):
 		super(RandomQueue, self).__init__(*args, **kwargs)
 		self.list = list()
+                self.on_changed = Event()
 		self.register_on_setting_changed('length', self.osc_length)
 		self.osc_length()
 		self.random.on_ready.register(self._random_on_ready)
@@ -179,6 +185,7 @@ class RandomQueue(Module):
 			raise EmptyQueueException
 		ret = self.list.pop()
 		self._grow()
+                self.on_changed()
 		return ret
 	def _grow(self):
 		if self.random.ready:
@@ -189,6 +196,7 @@ class RandomQueue(Module):
 	def cancel(self, request):
 		self.list.remove(request)
 		self.list._grow()
+                self.on_changed()
 	def move(self, request, amount):
 		assert False # shouldn't do that
 	def osc_length(self):
@@ -201,10 +209,16 @@ class RandomQueue(Module):
 				self._grow()
 		else:
 			self.list = self.list[:self.length]
+                self.on_changed()
 
 class AmalgamatedQueue(Module):
 	def __init__(self, *args, **kwargs):
 		super(AmalgamatedQueue, self).__init__(*args, **kwargs)
+                self.on_changed = Event()
+                self.first.on_changed.register(self._subqueue_changed)
+                self.second.on_changed.register(self._subqueue_changed)
+        def _subqueue_changed(self):
+                self.on_changed()
 	def request(self, media, user):
 		self.first.request(media, user)
 	@property
@@ -229,9 +243,11 @@ class Queue(Module):
 		super(Queue, self).__init__(*args, **kwargs)
 		self.list = list()
 		self.lock = threading.Lock()
+                self.on_changed = Event()
 	def request(self, media, user):
 		with self.lock:
 			self.list.insert(0, Request(self, media, user))
+                self.on_changed()
 	@property
 	def requests(self):
 		with self.lock:
@@ -241,9 +257,11 @@ class Queue(Module):
 			if not self.list:
 				raise EmptyQueueException
 			return self.list.pop()
+                self.on_changed()
 	def cancel(self, request):
 		with self.lock:
 			self.list.remove(request)
+                self.on_changed()
 	def move(self, request, amount):
 		aa = abs(amount)
 		with self.lock:
@@ -254,6 +272,7 @@ class Queue(Module):
 			     [self.list[idx]] +
 			     self.list[idx+aa+1:])
 			self.list = n if amount == aa else reversed(n)
+                self.on_changed()
 
 class Orchestrator(Module):
 	def __init__(self, *args, **kwargs):
