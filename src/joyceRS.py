@@ -36,9 +36,6 @@ class MariedChannelClass(JoyceChannel):
 	def handle_message(self, data):
 		if data['type'] == 'get_playing':
                         playing = self.server._get_playing()
-                        playing.update({
-                                'serverTime': time.time()
-                                })
 			self.send_message({
                                 'type': 'playing',
                                 'playing': playing})
@@ -118,11 +115,13 @@ class JoyceRS(Module):
                                 else str(playing[0].key),
                         'byKey': None if playing[1] is None
                                 else str(playing[1].key),
+                        'serverTime': time.time(),
                         'endTime': (time.mktime(playing[2].timetuple()) if
                                 not playing[2] is None else None)}
 
 	def _on_playing_changed(self, previous_playing):
 		t = self._get_playing()
-		t['type'] = 'playing_changed'
-		self.joyceServer.broadcast_message(t)
+		self.joyceServer.broadcast_message({
+                        'type': 'playing_changed',
+                        'playing': t })
 
