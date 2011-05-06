@@ -35,9 +35,9 @@ class MariedChannelClass(JoyceChannel):
 
 	def handle_message(self, data):
 		if data['type'] == 'get_playing':
-			t = self.server._get_playing()
-			t['type'] = 'playing'
-			self.send_message(t)
+			self.send_message({
+                                'type': 'playing',
+                                'playing': self.server._get_playing()})
 		elif data['type'] == 'list_media':
                         self.send_message({
                                 'type': 'media',
