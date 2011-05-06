@@ -135,7 +135,7 @@ class JoyceRS(Module):
                         'mediaKey': None if playing[0] is None
                                 else str(playing[0].key),
                         'byKey': None if playing[1] is None
-                                else str(playing[1].key),
+                                else str(playing[1].byKey),
                         'serverTime': time.time(),
                         'endTime': (time.mktime(playing[2].timetuple()) if
                                 not playing[2] is None else None)}}
