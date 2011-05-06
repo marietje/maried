@@ -1,10 +1,13 @@
 from __future__ import with_statement
 
 from maried.core import MediaStore, MediaFile, Media, Collection, User, Users, \
-			History, Request, PastRequest
+			History, Request, PastRequest, Denied, \
+                        AlreadyInQueueError, MaxQueueLengthExceededError
 from mirte.core import Module
 from sarah.event import Event
 from sarah.dictlike import AliasingMixin
+
+from pymongo.objectid import ObjectId
 
 import threading
 import tempfile
@@ -143,6 +146,8 @@ class MongoCollection(Collection):
                 return len(self._media)
 
 	def by_key(self, key):
+                if isinstance(key, basestring):
+                        key = ObjectId(key)
 		return self._media[key]
 
 	def _user_by_key(self, key):
