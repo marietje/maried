@@ -17,6 +17,13 @@ class Stopped(Exception):
 	pass
 class EmptyQueueException(Exception):
 	pass
+class AlreadyInQueueError(Denied):
+	pass
+class MaxQueueLengthExceededError(Denied):
+	pass
+class MaxQueueCountExceededError(Denied):
+	pass
+
 
 class Media(DictLike):
 	def __init__(self, coll, data):

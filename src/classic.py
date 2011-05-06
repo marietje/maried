@@ -22,13 +22,6 @@ import threading
 import contextlib
 import subprocess
 
-class AlreadyInQueueError(Denied):
-	pass
-class MaxQueueLengthExceededError(Denied):
-	pass
-class MaxQueueCountExceededError(Denied):
-	pass
-
 class ClassicMedia(Media):
 	def __init__(self, coll, data):
 		super(ClassicMedia, self).__init__(coll, data)
