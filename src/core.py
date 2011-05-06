@@ -222,7 +222,13 @@ class AmalgamatedQueue(Module):
 	def __init__(self, *args, **kwargs):
 		super(AmalgamatedQueue, self).__init__(*args, **kwargs)
                 self.on_changed = Event()
+                self.register_on_setting_changed('first', self.osc_first)
+                self.register_on_setting_changed('second', self.osc_second)
+                self.osc_first()
+                self.osc_second()
+        def osc_first(self):
                 self.first.on_changed.register(self._subqueue_changed)
+        def osc_second(self):
                 self.second.on_changed.register(self._subqueue_changed)
         def _subqueue_changed(self):
                 self.on_changed()
