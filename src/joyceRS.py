@@ -119,7 +119,7 @@ class JoyceRS(Module):
                         'endTime': (time.mktime(playing[2].timetuple()) if
                                 not playing[2] is None else None)}
 
-	def _on_playing_changed(self, previous_playing):
+	def _on_playing_changed(self, previously_playing):
 		t = self._get_playing()
 		self.joyceServer.broadcast_message({
                         'type': 'playing_changed',
