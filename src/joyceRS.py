@@ -5,6 +5,7 @@ import hashlib
 import threading
 
 import maried
+from maried.core import AlreadyInQueueError, Denied
 
 from mirte.core import Module
 from sarah.event import Event
@@ -71,6 +72,31 @@ class MariedChannelClass(JoyceChannel):
                         self.user = user
                         self.send_message({
                                 'type': 'logged_in'})
+                elif data['type'] == 'request':
+                        if self.user is None:
+                                self.send_message({
+                                        'type': 'error_request',
+                                        'message': 'Please log in before '+
+                                                        'requesting'})
+                                return
+                        try:
+                                m = self.server.desk.media_by_key(
+                                                data['mediaKey'])
+                        except KeyError:
+                                self.send_message({
+                                        'type': 'error_request',
+                                        'message': 'No such media'})
+                                return
+                        try:
+                                m = self.server.desk.request_media(m, self.user)
+                        except AlreadyInQueueError:
+                                self.send_message({
+                                        'type': 'error_request',
+                                        'message': 'Already queued'})
+                        except Denied:
+                                self.send_message({
+                                        'type': 'error_request',
+                                        'message': 'Request denied'})
 
         def after_close(self):
                 self.l.debug("Closed")
