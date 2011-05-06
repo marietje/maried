@@ -1,5 +1,6 @@
 from __future__ import with_statement
 import os
+import time
 import random
 import logging
 import datetime
@@ -262,11 +263,17 @@ class Orchestrator(Module):
 		self.playing_media = None
 		self.satisfied_request = None
 		self.player.endTime = None
+                self.guessed_endTime = None
+                self.player.got_endTime.register(self._player_got_endTime)
+        def _player_got_endTime(self, endTime):
+                self.guessed_endTime = None
 	def get_playing(self):
 		with self.lock:
 			return (self.playing_media,
 				self.satisfied_request,
-				self.player.endTime)
+				self.player.endTime
+                                        if self.guessed_endTime is None
+                                        else self.guessed_endTime)
 	def stop(self):
 		with self.lock:
 			self.running = False
@@ -299,6 +306,8 @@ class Orchestrator(Module):
 			finally:
 				self.lock.release()
 			startTime = datetime.datetime.now()
+                        self.guessed_endTime = datetime.datetime.fromtimestamp(
+				time.time() + media.length)
 			self.on_playing_changed(previous_playing)
 			try:
 				self.player.play(media)

@@ -153,6 +153,7 @@ class GstPlayer(Player):
 	def __init__(self, *args, **kwargs):
 		super(GstPlayer, self).__init__(*args, **kwargs)
                 self.readyEvent = threading.Event()
+                self.got_endTime = Event()
 
         def run(self):
                 self._initialize()
@@ -208,6 +209,7 @@ class GstPlayer(Player):
 	def _play(self, media):
 		self.endTime = datetime.datetime.fromtimestamp(
 				time.time() + media.length)
+                self.got_endTime(self.endTime)
 		try:
 			mf = media.mediaFile
 		except KeyError:
