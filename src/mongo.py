@@ -164,7 +164,7 @@ class MongoCollection(Collection):
 			'mediaFileKey': mediaFile.key,
 			'uploadedTimestamp': time.time(),
 			'uploadedByKey': user.key})
-		key = self.cMedia.insert(info)
+		key = self.cMedia.insert(MongoMedia.normalize_dict(info))
 		info['_id'] = key
 		with self.lock:
 			self._media[key] = MongoMedia(self, info)
@@ -220,6 +220,7 @@ class MongoMediaStore(MediaStore):
 			if len(b) == 0:
 				break
 			f.write(b)
+                stream.close()
 		f.close()
 		hd = m.hexdigest()
 		if not self._keys is None and hd in self._keys:
@@ -284,7 +285,8 @@ class MongoHistory(History):
 		info = {'mediaKey': media.key,
 			'byKey': None if request is None else request.by.key,
 			'at':  time.mktime(at.timetuple())}
-		info['key'] = self.cHistory.insert(info)
+		info['key'] = self.cHistory.insert(
+                                MongoPastRequest.normalize_dict(info))
 		self.on_record(MongoPastRequest(self, info))
 	
 	def list_past_requests(self):
