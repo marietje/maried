@@ -23,6 +23,8 @@ class MaxQueueLengthExceededError(Denied):
 	pass
 class MaxQueueCountExceededError(Denied):
 	pass
+class UnderPreShiftLock(Denied):
+        pass
 
 
 class Media(DictLike):
@@ -177,37 +179,55 @@ class Users(Module):
 class RandomQueue(Module):
 	def __init__(self, *args, **kwargs):
 		super(RandomQueue, self).__init__(*args, **kwargs)
+                self.lock = threading.Lock()
 		self.list = list()
                 self.on_changed = Event()
 		self.register_on_setting_changed('length', self.osc_length)
 		self.osc_length()
 		self.random.on_ready.register(self._random_on_ready)
+                self.pre_shift_lock = False
 	def _random_on_ready(self):
-		self._fill()
+                with self.lock:
+                        self._fill()
+                self.on_changed()
 	@property
 	def requests(self):
-		return reversed(self.list)
+                with self.lock:
+                        return reversed(self.list)
+        def peek(self, set_pre_shift_lock=False):
+                with self.lock:
+                        ret = self.queue[-1]
+                        if set_pre_shift_lock:
+                                self.pre_shift_lock = True
+                        return ret
 	def shift(self):
-		if len(self.list) == 0:
-			raise EmptyQueueException
-		ret = self.list.pop()
-		self._grow()
+                with self.lock:
+                        if not self.list:
+                                raise EmptyQueueException
+                        ret = self.list.pop()
+                        self._grow()
+                        self.pre_shift_lock = False
                 self.on_changed()
-		return ret
+                return ret
 	def _grow(self):
-		if self.random.ready:
-			self.list.insert(0, Request(self, {
-				'media': self.random.pick()}))
+                if self.random.ready:
+                        self.list.insert(0, Request(self, {
+                                'media': self.random.pick()}))
 	def request(self, media, user):
 		assert False # shouldn't do that
 	def cancel(self, request):
-		self.list.remove(request)
-		self.list._grow()
+                with self.lock:
+                        if self.pre_shift_lock and request == self.list[-1]:
+                                raise UnderPreShiftLock
+                        self.list.remove(request)
+                        self.list._grow()
                 self.on_changed()
 	def move(self, request, amount):
 		assert False # shouldn't do that
 	def osc_length(self):
-		self._fill()
+                with self.lock:
+                        self._fill()
+                self.on_changed()
 	def _fill(self):
 		if not self.random.ready:
 			return
@@ -216,7 +236,6 @@ class RandomQueue(Module):
 				self._grow()
 		else:
 			self.list = self.list[:self.length]
-                self.on_changed()
 
 class AmalgamatedQueue(Module):
 	def __init__(self, *args, **kwargs):
@@ -226,6 +245,11 @@ class AmalgamatedQueue(Module):
                 self.register_on_setting_changed('second', self.osc_second)
                 self.osc_first()
                 self.osc_second()
+        def peek(self, set_pre_shift_lock):
+                try:
+                        return self.first.peek(set_pre_shift_lock)
+                except EmptyQueueException:
+                        return self.second.peek(set_pre_shift_lock)
         def osc_first(self):
                 self.first.on_changed.register(self._subqueue_changed)
         def osc_second(self):
@@ -257,6 +281,7 @@ class Queue(Module):
 		self.list = list()
 		self.lock = threading.Lock()
                 self.on_changed = Event()
+                self.pre_shift_lock = False
 	def request(self, media, user):
 		with self.lock:
 			self.list.insert(0, Request(self, {
@@ -267,21 +292,37 @@ class Queue(Module):
 	def requests(self):
 		with self.lock:
 			return reversed(self.list)
+        def peek(self, set_pre_shift_lock=False):
+                """ Returns the first element in the Queue
+
+                If set_pre_shift_lock is set, then the queue will disallow
+                any modification to the first element in the Queue, until
+                it has been shifted. """
+                with self.lock:
+                        ret = self.queue[-1]
+                        if set_pre_shift_lock:
+                                self.pre_shift_lock = True
+                        return ret
 	def shift(self):
 		with self.lock:
 			if not self.list:
 				raise EmptyQueueException
 			ret = self.list.pop()
+                        self.pre_shift_lock = False
                 self.on_changed()
                 return ret
 	def cancel(self, request):
 		with self.lock:
+                        if self.pre_shift_lock and self.list[-1] == request:
+                                raise UnderPreShiftLock
 			self.list.remove(request)
                 self.on_changed()
 	def move(self, request, amount):
 		aa = abs(amount)
 		with self.lock:
 			o = self.list if amount == aa else reversed(self.list) 
+                        if self.pre_shift_lock and o[-1] == request:
+                                raise UnderPreShiftLock
 			idx = o.index(request)
 			n = (self.list[:idx] + 
 			     self.list[idx+1:idx+aa+1] +
