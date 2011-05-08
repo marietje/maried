@@ -196,7 +196,9 @@ class RandomQueue(Module):
                         return reversed(self.list)
         def peek(self, set_pre_shift_lock=False):
                 with self.lock:
-                        ret = self.queue[-1]
+                        if not self.list:
+                                raise EmptyQueueException
+                        ret = self.list[-1]
                         if set_pre_shift_lock:
                                 self.pre_shift_lock = True
                         return ret
@@ -299,7 +301,9 @@ class Queue(Module):
                 any modification to the first element in the Queue, until
                 it has been shifted. """
                 with self.lock:
-                        ret = self.queue[-1]
+                        if not self.list:
+                                raise EmptyQueueException
+                        ret = self.list[-1]
                         if set_pre_shift_lock:
                                 self.pre_shift_lock = True
                         return ret
