@@ -342,62 +342,89 @@ class Orchestrator(Module):
 		self.lock = threading.Lock()
 		self.playing_media = None
 		self.satisfied_request = None
-		self.player.endTime = None
-                self.guessed_endTime = None
-                self.player.got_endTime.register(self._player_got_endTime)
-        def _player_got_endTime(self, endTime):
-                self.guessed_endTime = None
+                self.player.on_about_to_finish.register(
+                                self._player_on_about_to_finish)
+                self.player.on_playing_started.register(
+                                self._player_on_playing_started)
+                self.player.on_playing_finished.register(
+                                self._player_on_playing_finished)
+                self.peeked_from_randomQueue = True
+                self.next_satisfied_request = None
+                self.next_playing_media = None
+                self.previously_playing = None
+
 	def get_playing(self):
 		with self.lock:
 			return (self.playing_media,
 				self.satisfied_request,
-				self.player.endTime
-                                        if self.guessed_endTime is None
-                                        else self.guessed_endTime)
+				self.player.endTime)
+        def run(self):
+                with self.lock:
+                        self.running = True
+                self._queue_next()
+
 	def stop(self):
 		with self.lock:
 			self.running = False
 
-	def run(self):
-		self.running = True
-		while self.running:
-			self.lock.acquire()
-			previous_playing = (self.playing_media,
-					    self.satisfied_request,
-					    self.player.endTime)
-			try:
-				if not self.running: break
-				req = None
-				try:
-					req = self.queue.shift()
-					media = req.media
-					assert not media is None
-				except EmptyQueueException:
-					try:
-						media = self.randomQueue.shift(
-								).media
-					except EmptyQueueException:
-						self.lock.release()
-						self.wait_for_media()
-						self.lock.acquire()
-						continue
-				self.playing_media = media
-				self.satisfied_request = req
-			finally:
-				self.lock.release()
-			startTime = datetime.datetime.now()
-                        self.guessed_endTime = datetime.datetime.fromtimestamp(
-				time.time() + media.length)
-			self.on_playing_changed(previous_playing)
-			try:
-				self.player.play(media)
-			except Stopped:
-				# TODO let the orchestrator wait on a new player
-				self.l.warn("Player raised Stopped.  Quitting")
-				break
-			self.history.record(self.playing_media,
-					    self.satisfied_request,
-					    startTime)
+        def _queue_next(self):
+                self.lock.acquire()
+                try:
+                        if not self.running:
+                                return
+                        req = None
+                        try:
+                                req = self.queue.peek(set_pre_shift_lock=True)
+                                media = req.media
+                                assert not media is None
+                                self.peeked_from_randomQueue = False
+                        except EmptyQueueException:
+                                media = self._peek_from_randomQueue()
+                        self.next_playing_media = media
+                        self.next_satisfied_request = req
+                        self.player.queue(media)
+                finally:
+                        self.lock.release()
+
+        def _player_on_playing_finished(self, media, endTime):
+                with self.lock:
+                        assert media == self.playing_media
+                        self.previously_playing = (media,
+                                                 self.satisfied_request,
+                                                 endTime)
+                if not media is None:
+                        self.history.record(media,
+                                self.satisfied_request,
+                                endTime  - datetime.timedelta(0, media.length))
+
+        def _player_on_playing_started(self, media, endTime):
+                with self.lock:
+                        assert media == self.next_playing_media
+                        self.satisfied_request = self.next_satisfied_request
+                        self.next_satisfied_request = None
+                        self.next_playing_media = None
+                        self.playing_media = media
+                        if self.peeked_from_randomQueue:
+                                self.randomQueue.shift()
+                        else:
+                                self.queue.shift()
+                        previously_playing = self.previously_playing
+                        self.previously_playing = None
+                self.on_playing_changed(previously_playing)
+        def _peek_from_randomQueue(self):
+                while True:
+                        try:
+                                media = self.randomQueue.peek(
+                                        set_pre_shift_lock=True).media
+                                self.peeked_from_randomQueue = True
+                                return media
+                        except EmptyQueueException:
+                                self.lock.release()
+                                self.wait_for_media()
+                                self.lock.acquire()
+
+        def _player_on_about_to_finish(self):
+                self._queue_next()
 	
 	def wait_for_media(self):
 		self.l.info("Randomqueue couldn't return media -- collection "+
@@ -501,9 +528,12 @@ class Player(Module):
 	def __init__(self, *args, **kwargs):
 		super(Player, self).__init__(*args, **kwargs)
 		self.endTime = None
+                self.on_about_to_finish = Event()
+                self.on_playing_started = Event()
+                self.on_playing_finished = Event()
 	def stop(self):
 		raise NotImplementedError
-	def play(self, media):
+	def queue(self, media):
 		raise NotImplementedError
 
 class Collection(Module):
