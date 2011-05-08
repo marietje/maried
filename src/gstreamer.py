@@ -153,14 +153,16 @@ class GstPlayer(Player):
 	def __init__(self, *args, **kwargs):
 		super(GstPlayer, self).__init__(*args, **kwargs)
                 self.readyEvent = threading.Event()
-                self.got_endTime = Event()
+		self.idleCond = threading.Condition()
 
         def run(self):
                 self._initialize()
 
         def _initialize(self):
                 self.gtkMainLoop.ready.wait()
-		self.bin = gst.element_factory_make('playbin', 'playbin')
+                
+                # set up the player bin
+		self.bin = gst.element_factory_make('playbin2', 'playbin2')
 		self.bin2 = gst.element_factory_make('bin', 'bin')
 		self.ac = gst.element_factory_make('audioconvert',
 				'audioconvert')
@@ -182,40 +184,41 @@ class GstPlayer(Player):
 		self.bus = self.bin.get_bus()
 		self.bus.add_signal_watch()
 		self.bus.connect('message', self.on_message)
-		self.idleCond = threading.Condition()
+                self.bin.connect('about-to-finish', self._on_about_to_finish)
+
+                # internal state
 		self.idle = True
 		self.stopped = False
+                self.playing_media = None
+                self.next_media = None
+                self.next_wrapper = None
+                self.next_stream = None
+                self.previous_wrapper = None
+                self.previous_stream = None
                 self.readyEvent.set()
 
-	def play(self, media):
+	def queue(self, media):
+                """ Queues the next media to be played """
+                # Check current state
                 self.readyEvent.wait()
+                got_to_start_playing = False
 		with self.idleCond:
 			if self.stopped:
 				raise Stopped
-			if not self.idle:
-				self.l.warn("Waiting on idleCond")
-				self.idleCond.wait()
-			if self.stopped:
-				raise Stopped
-			self.idle = False
-		try:
-			self._play(media)
-		except Exception:
-			with self.idleCond:
-				self.idleCond.notifyAll()
-			self.idle = True
-			raise
+                        if not self.next_media is None:
+                                raise RuntimeError, \
+                                        "Another media has been queued already"
+                        if self.playing_media is None:
+                                got_to_start_playing = True
+                        self.next_media = media
 
-	def _play(self, media):
-		self.endTime = datetime.datetime.fromtimestamp(
-				time.time() + media.length)
-                self.got_endTime(self.endTime)
+                # Get mediafile and set up file descriptor
+                self.l.debug('queueing %s' % media)
 		try:
 			mf = media.mediaFile
 		except KeyError:
 			self.l.error("%s's mediafile doesn't exist" % media)
 			return
-		self.l.info("Playing %s" % media)
 		stream = mf.open()
 		wrapper = None
 		if hasattr(stream, 'fileno'):
@@ -226,31 +229,95 @@ class GstPlayer(Player):
 				'%s wrapper.run %s' % (self.l.name,
 					wrapper.fileno()))
 			uri = 'fd://%s'%wrapper.fileno()
+                self.next_wrapper = wrapper
+                self.next_stream = stream
+
+                # Queue in the playbin
 		self.bin.set_property('uri', uri)
+
+                # Inject TRACK_GAIN and TRACK_PEAK tags
 		tl = gst.TagList()
 		tl[gst.TAG_TRACK_GAIN] = media.trackGain
 		tl[gst.TAG_TRACK_PEAK] = media.trackPeak
 		self.rg_event = gst.event_new_tag(tl)
-		self.bin.set_state(gst.STATE_PLAYING)
+
+                # We're done
+
+                # Start playing -- if not already
+                if got_to_start_playing:
+                        self.bin.set_state(gst.STATE_PLAYING)
+                        self.idle = False
+
+        def _on_stream_changed(self):
+                """ Called when GStreamer signals that the playing stream
+                    has changed.  In this method we will clean up the previous
+                    stream (if any) and let the world know the playing
+                    media changed """
+                now = time.time()
+                
+                self.l.info("playing: %s"% self.next_media)
+                
+                self._on_media_finished()
+
+                # Update state
+                old_endTime = self.endTime
+                old_media = self.playing_media
+                self.playing_media, self.next_media = self.next_media, None
+		self.endTime = datetime.datetime.fromtimestamp(
+				now + self.playing_media.length)
+                self.previous_stream, self.next_stream = self.next_stream, None
+                self.previous_wrapper, self.next_wrapper = \
+                                                self.next_wrapper, None
+
+                # Notify the world
+                if not old_media is None:
+                        self.on_playing_finished(old_media, old_endTime)
+                self.on_playing_started(self.playing_media, self.endTime)
+
+        def _on_about_to_finish(self, bin):
+                self.l.info('about to finish')
+                self.on_about_to_finish()
+
+	def _on_eos(self):
 		with self.idleCond:
-			self.idleCond.wait()
-		if not wrapper is None:
-			wrapper.close()
-		if hasattr(stream, 'close'):
-			stream.close()
-	
-	def _reset(self):
-		self.bin.set_state(gst.STATE_NULL)
-		with self.idleCond:
-			self.idle = True
-			with self.idleCond:
-				self.idleCond.notifyAll()
+                        if not self.next_media is None:
+                                return
+                        self.bin.set_state(gst.STATE_NULL)
+                        self._on_media_finished()
+                        self.idle = True
+                        self.idleCond.notifyAll()
+
+        def _on_media_finished(self):
+                if not self.previous_wrapper is None:
+                        self.previous_wrapper.close()
+                if hasattr(self.previous_stream, 'close'):
+                        self.previous_stream.close()
+
+                # Update state
+                old_playing = self.playing_media
+                old_endTime = self.endTime
+                self.playing_media = None
+                self.previous_stream = None
+                self.previous_wrapper = None
+                self.endTime = None
+
+                # Notify the world
+                if not old_playing is None:
+                        self.on_playing_finished(old_playing, old_endTime)
+
+        def _interrupt(self):
+                with self.idleCond:
+                        self.l.debug('_interrupt!')
+                        self.bin.set_state(gst.STATE_NULL)
+                        self._on_media_finished()
+                        self.idle = True
+                        self.idleCond.notifyAll()
 	
 	def on_message(self, bus, message):
 		if message.type == gst.MESSAGE_ERROR:
 			error, debug = message.parse_error()
 			self.l.error("Gst: %s %s" % (error, debug))
-			self._reset()
+			self._on_eos()
 		elif (not self.rg_event is None and
 				message.type == gst.MESSAGE_STATE_CHANGED and
 				message.src == self.rgvolume and
@@ -266,11 +333,16 @@ class GstPlayer(Player):
 					'not reached: trg %s res %s' % (
 						tg, rg))
 		elif message.type == gst.MESSAGE_EOS:
-			self._reset()
+			self._on_eos()
+                elif (message.type == gst.MESSAGE_ELEMENT and
+                                message.structure.get_name() ==
+                                        'playbin2-stream-changed'):
+                        self._on_stream_changed()
+
 	
 	def stop(self):
                 self.readyEvent.wait()
-		self._reset()
+                self._interrupt()
 		self.bus.remove_signal_watch()
 		with self.idleCond:
 			if not self.idle:
