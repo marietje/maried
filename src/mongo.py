@@ -59,6 +59,9 @@ class MongoMedia(AliasingMixin, Media):
 	def __init__(self, coll, data):
 		super(MongoMedia, self).__init__(coll,
                                 self.normalize_dict(data))
+        def __repr__(self):
+                return '<MongoMedia %s - %s (%s)>' % (self.artist, self.title,
+                                                        str(self.key))
 
 class MongoPastRequest(AliasingMixin, PastRequest):
 	aliases = {'key': '_id',
