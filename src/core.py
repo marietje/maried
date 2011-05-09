@@ -6,10 +6,14 @@ import logging
 import datetime
 import tempfile
 import threading
+import collections
 
 from mirte.core import Module
 from sarah.event import Event
 from sarah.dictlike import DictLike
+
+ChangeList = collections.namedtuple('ChangeList', (
+                'added', 'updated', 'removed'))
 
 class Denied(Exception):
 	pass
@@ -114,8 +118,8 @@ class Desk(Module):
                                 self._on_requests_changed)
 	def _on_playing_changed(self, previous_playing):
 		self.on_playing_changed(previous_playing)
-	def _on_collection_changed(self):
-		self.on_media_changed()
+	def _on_collection_changed(self, changeList):
+		self.on_media_changed(changeList)
 	def _on_requests_changed(self):
 		self.on_requests_changed()
 	def list_media(self):
@@ -487,10 +491,16 @@ class SimpleRandom(Random):
 		super(SimpleRandom, self).__init__(*args, **kwargs)
 		self.collection.on_keys_changed.register(
 				self.on_collection_keys_changed)
-		self.on_collection_keys_changed()
+		self.on_collection_keys_changed(None)
 	
-	def on_collection_keys_changed(self):
-		self.keys = self.collection.media_keys
+	def on_collection_keys_changed(self, changeList):
+                if changeList is None:
+                        self.keys = self.collection.media_keys
+                else:
+                        for x in changeList.removed:
+                                self.keys.remove(x)
+                        for x in changeList.added:
+                                self.keys.append(x)
 		if len(self.keys) > 0:
 			self.on_ready()
 

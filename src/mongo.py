@@ -2,7 +2,8 @@ from __future__ import with_statement
 
 from maried.core import MediaStore, MediaFile, Media, Collection, User, Users, \
 			History, Request, PastRequest, Denied, \
-                        AlreadyInQueueError, MaxQueueLengthExceededError
+                        AlreadyInQueueError, MaxQueueLengthExceededError, \
+                        ChangeList
 from mirte.core import Module
 from sarah.event import Event
 from sarah.dictlike import AliasingMixin
@@ -121,8 +122,8 @@ class MongoCollection(Collection):
 				self.users[tmp['_id']] = MongoUser(self, tmp)
 		self.l.info("Cached %s media %s users" % (len(self._media),
 							  len(self.users)))
-		self.on_keys_changed()
-		self.on_changed()
+		self.on_keys_changed(None)
+		self.on_changed(None)
 		with self.lock:
 			if len(self._media) > 0:
 				self.got_media_event.set()
@@ -170,19 +171,22 @@ class MongoCollection(Collection):
 			self._media[key] = MongoMedia(self, info)
 			if len(self._media) == 1:
 				self.got_media_event.set()
-		self.on_keys_changed()
-		self.on_changed()
+		self.on_keys_changed(ChangeList(
+                        added=(key,), updated=(), removed=()))
+		self.on_changed(ChangeList(
+                        added=(self._media[key],), updated=(), removed=()))
 	
 	def _unlink_media(self, media):
 		with self.lock:
 			del(self._media[media.key])
 		self.cMedia.remove({'_id': media.key})
-		self.db.on_keys_changed()
-		self.on_changed()
+		self.db.on_keys_changed(added=(), updated=(),
+                                removed=(media.key,))
+		self.on_changed(added=(), updated=(), removed=(media,))
 	
 	def _save_media(self, media):
 		self.db.save(media.to_dict())
-		self.on_changed()
+		self.on_changed(added=(), updated=(media,), removed=())
 
 class MongoMediaStore(MediaStore):
 	def __init__(self, *args, **kwargs):

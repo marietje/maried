@@ -119,15 +119,31 @@ class JoyceRS(Module):
                 self.lock = threading.Lock()
 	def _channel_constructor(self, *args, **kwargs):
 		return MariedChannelClass(self, *args, **kwargs)
-	def _on_media_changed(self):
+	def _on_media_changed(self, changeList):
+                msg = {'type': 'collection_changed'}
+                if changeList is None:
+                        msg['changes'] = None
+                else:
+                        msg['changes'] = {
+                                'added': [self._get_media_dict(m)
+                                        for m in changeList.added],
+                                'updated': [self._get_media_dict(m)
+                                        for m in changeList.updated],
+                                'removed': [self._get_media_dict(m)
+                                        for m in changeList.removed]}
                 for follower in self._followers_of('media'):
-		        follower.send_message({
-                                'type': 'collection_changed'})
+		        follower.send_message(msg)
 	def _on_requests_changed(self):
                 self._send_all_requests(self._followers_of('requests'))
 	def _on_playing_changed(self, previously_playing):
                 self._send_playing(self._followers_of('playing'))
 
+        def _get_media_dict(self, media):
+                return {'key': str(media.key),
+                        'artist': media.artist,
+                        'title': media.title,
+                        'uploadedByKey': str(media.uploadedByKey),
+                        'length': media.length}
 	def _send_playing(self, followers):
 		playing = self.desk.get_playing()
                 msg = { 'type': 'playing',
@@ -162,16 +178,7 @@ class JoyceRS(Module):
                 for ms in iter_by_n(self.desk.list_media(), 2):
                         msg = {
                                 'type': 'media_part',
-                                'part': [{
-                                        'key': str(m.key),
-                                        'artist': m.artist,
-                                        'title': m.title,
-                                        'uploadedByKey':
-                                                str(m.uploadedByKey),
-                                        'uploadedTimestamp':
-                                                m.uploadedTimestamp,
-                                        'length': m.length}
-                                                for m in ms]}
+                                'part': [self._get_media_dict(m) for m in ms]}
                         for follower in followers:
                                 follower.send_message(msg)
 
