@@ -120,7 +120,7 @@ class JoyceRS(Module):
 	def _channel_constructor(self, *args, **kwargs):
 		return MariedChannelClass(self, *args, **kwargs)
 	def _on_media_changed(self, changeList):
-                msg = {'type': 'collection_changed'}
+                msg = {'type': 'media_changed'}
                 if changeList is None:
                         msg['changes'] = None
                 else:
