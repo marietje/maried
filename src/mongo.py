@@ -15,6 +15,7 @@ import tempfile
 import pymongo
 import hashlib
 import gridfs
+import base64
 import time
 import os
 
@@ -30,6 +31,7 @@ class MongoUser(AliasingMixin, User):
 	aliases = {'key': '_id',
 		   'realName': 'n',
 		   'level': 'l',
+                   'accessKey': 'a',
 		   'passwordHash': 'p'}
 	def __init__(self, coll, data):
 		super(MongoUser, self).__init__(self.normalize_dict(data))
@@ -45,6 +47,10 @@ class MongoUser(AliasingMixin, User):
                 return self.level >= 3
 	def check_password(self, password):
 		return self.passwordHash == hashlib.md5(password).hexdigest()
+        def set_password(self, password):
+                self.passwordHash = hashlib.md5(password).hexdigest()
+        def regenerate_accessKey(self):
+                self.accessKey = base64.b64encode(os.urandom(6))
 
 class MongoMedia(AliasingMixin, Media):
 	aliases = {'key': '_id',

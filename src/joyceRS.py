@@ -47,11 +47,22 @@ class MariedChannelClass(JoyceChannel):
                         self.send_message({
                                 'type': 'login_token',
                                 'login_token': self.login_token})
-                elif data['type'] == 'login':
+                elif data['type'] == 'regenerate_accessKey':
+                        if self.user is None:
+                                self.send_message({
+                                        'type': 'error_regenerate_accessKey',
+                                        'message': 'not logged in'})
+                                return
+                        self.user.regenerate_accessKey()
+                        self.send_message({
+                                'type': 'accessKey',
+                                'accessKey': self.user.accessKey})
+                elif data['type'] == 'login' or \
+                     data['type'] == 'login_accessKey':
                         if ('username' not in data or
                             'hash' not in data):
                                 self.send_message({
-                                        'type': 'error_login',
+                                        'type': 'error_'+data['type'],
                                         'message': 'Expected user and hash'})
                                 return
                         try:
@@ -59,19 +70,24 @@ class MariedChannelClass(JoyceChannel):
                                                 data['username'])
                         except KeyError:
                                 self.send_message({
-                                        'type': 'error_login',
+                                        'type': 'error_'+data['type'],
                                         'message': 'User does not exist'})
                                 return
-                        expected_hash = hashlib.md5(user.passwordHash +
+                        secret = user.passwordHash if data['type'] == 'login' \
+                                        else user.accessKey
+                        expected_hash = hashlib.md5(secret +
                                                 self.login_token).hexdigest()
                         if expected_hash != data['hash']:
                                 self.send_message({
-                                        'type': 'error_login',
+                                        'type': 'error_'+data['type'],
                                         'message': 'Wrong password'})
                                 return
                         self.user = user
+                        if user.accessKey is None:
+                                user.regenerate_accessKey()
                         self.send_message({
-                                'type': 'logged_in'})
+                                'type': 'logged_in',
+                                'accessKey': user.accessKey})
                 elif data['type'] == 'request':
                         if self.user is None:
                                 self.send_message({
