@@ -35,7 +35,7 @@ class MongoUser(AliasingMixin, User):
 		   'passwordHash': 'p'}
 	def __init__(self, coll, data):
 		super(MongoUser, self).__init__(self.normalize_dict(data))
-		self.collection = coll
+		self.self.collection = coll
 	@property
         def has_access(self):
                 return self.level >= 2
@@ -51,6 +51,8 @@ class MongoUser(AliasingMixin, User):
                 self.passwordHash = hashlib.md5(password).hexdigest()
         def regenerate_accessKey(self):
                 self.accessKey = base64.b64encode(os.urandom(6))
+        def save(self):
+                self.collection._save_user(self)
 
 class MongoMedia(AliasingMixin, Media):
 	aliases = {'key': '_id',
@@ -194,8 +196,11 @@ class MongoCollection(Collection):
 		self.on_changed(added=(), updated=(), removed=(media,))
 	
 	def _save_media(self, media):
-		self.db.save(media.to_dict())
+		self.cMedia.save(media.to_dict())
 		self.on_changed(added=(), updated=(media,), removed=())
+
+        def _save_user(self, user):
+                self.cUsers.save(user.to_dict())
 
 class MongoMediaStore(MediaStore):
 	def __init__(self, *args, **kwargs):
