@@ -120,6 +120,11 @@ class MariedChannelClass(JoyceChannel):
                                 self.send_message({
                                         'type': 'error_request',
                                         'message': 'Request denied'})
+                else:
+                        self.send_message({
+                                'type': 'error',
+                                'message': 'unknown msg type %s' % \
+                                                data['type']})
 
         def after_close(self):
                 self.l.debug("Closed")
