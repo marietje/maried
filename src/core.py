@@ -144,7 +144,7 @@ class Desk(Module):
 	def cancel_request(self, request, user):
 		self.users.assert_cancel(user, request)
 		request.cancel()
-	def move_request(self, request, amount):
+	def move_request(self, request, amount, user):
 		self.users.assert_move(user, request, amount)
 		request.move(amount)
 	def get_playing(self):
