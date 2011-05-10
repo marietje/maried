@@ -1,6 +1,7 @@
 includes:
   - core
   - joyce
+  - sarah/refStore
 definitions:
   joyceRS:
     implementedBy: maried.joyceRS.JoyceRS
@@ -8,3 +9,4 @@ definitions:
     run: false
     settings:
       joyceServer: {type: joyceServer }
+      refStore: {type: refStore}

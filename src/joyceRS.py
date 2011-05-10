@@ -185,6 +185,7 @@ class JoyceRS(Module):
                 msg = {
                         'type': 'requests',
                         'requests': [{
+                                        'key': self.refStore.key_of(r),
                                         'byKey': None if r.byKey is None
                                                 else str(r.byKey),
                                         'mediaKey': str(r.mediaKey)
