@@ -120,6 +120,37 @@ class MariedChannelClass(JoyceChannel):
                                 self.send_message({
                                         'type': 'error_request',
                                         'message': 'Request denied'})
+                elif data['type'] == 'cancel_request':
+                        if not 'key' in data:
+                                self.send_message({
+                                        'type': 'error_cancel_request',
+                                        'message': 'Missing key'})
+                                return
+                        try:
+                                req = self.server.requests_ns.by_key(
+                                                data['key'])
+                        except KeyError:
+                                self.send_message({
+                                        'type': 'error_cancel_request',
+                                        'message': 'Request not found'})
+                                return
+                        self.server.desk.cancel_request(req, self.user)
+                elif data['type'] == 'move_request':
+                        if not 'key' in data or not 'amount' in data:
+                                self.send_message({
+                                        'type': 'error_move_request',
+                                        'message': 'Missing key or amount'})
+                                return
+                        try:
+                                self.server.requests_ns.by_key(
+                                        data['key'])
+                        except KeyError:
+                                self.send_message({
+                                        'type': 'error_move_request',
+                                        'message': 'Request not found'})
+                                return
+                        self.server.desk.move_request(req, int(data['amount'],
+                                                        self.user)
                 else:
                         self.send_message({
                                 'type': 'error',
