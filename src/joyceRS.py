@@ -150,7 +150,9 @@ class MariedChannelClass(JoyceChannel):
                                         'message': 'Request not found'})
                                 return
                         self.server.desk.move_request(req, int(data['amount'],
-                                                        self.user)
+                                                        self.user))
+                elif data['type'] == 'list_media':
+                        self.server._send_all_media((self,))
                 else:
                         self.send_message({
                                 'type': 'error',
