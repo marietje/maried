@@ -140,6 +140,7 @@ class JoyceRS(Module):
                                 'playing': (set(), self._send_playing),
                                 'media': (set(), self._send_all_media)}
                 self.lock = threading.Lock()
+                self.requests_ns = self.refStore.create_namespace()
 	def _channel_constructor(self, *args, **kwargs):
 		return MariedChannelClass(self, *args, **kwargs)
 	def _on_media_changed(self, changeList):
@@ -185,7 +186,7 @@ class JoyceRS(Module):
                 msg = {
                         'type': 'requests',
                         'requests': [{
-                                        'key': self.refStore.key_of(r),
+                                        'key': self.requests_ns.key_of(r),
                                         'byKey': None if r.byKey is None
                                                 else str(r.byKey),
                                         'mediaKey': str(r.mediaKey)
