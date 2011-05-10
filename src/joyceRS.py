@@ -54,6 +54,7 @@ class MariedChannelClass(JoyceChannel):
                                         'message': 'not logged in'})
                                 return
                         self.user.regenerate_accessKey()
+                        self.user.save()
                         self.send_message({
                                 'type': 'accessKey',
                                 'accessKey': self.user.accessKey})
@@ -75,6 +76,11 @@ class MariedChannelClass(JoyceChannel):
                                 return
                         secret = user.passwordHash if data['type'] == 'login' \
                                         else user.accessKey
+                        if secret is None:
+                                self.send_message({
+                                        'type': 'error_'+data['type'],
+                                        'message': 'Secret not set'})
+                                return
                         expected_hash = hashlib.md5(secret +
                                                 self.login_token).hexdigest()
                         if expected_hash != data['hash']:
@@ -85,6 +91,7 @@ class MariedChannelClass(JoyceChannel):
                         self.user = user
                         if user.accessKey is None:
                                 user.regenerate_accessKey()
+                                user.save()
                         self.send_message({
                                 'type': 'logged_in',
                                 'accessKey': user.accessKey})
