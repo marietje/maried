@@ -226,7 +226,7 @@ class RandomQueue(Module):
                         if self.pre_shift_lock and request == self.list[-1]:
                                 raise UnderPreShiftLock
                         self.list.remove(request)
-                        self.list._grow()
+                        self._grow()
                 self.on_changed()
 	def move(self, request, amount):
 		assert False # shouldn't do that
@@ -328,7 +328,8 @@ class Queue(Module):
 	def move(self, request, amount):
 		aa = abs(amount)
 		with self.lock:
-			o = self.list if amount == aa else reversed(self.list) 
+			o = self.list if amount == aa else list(
+                                                reversed(self.list))
                         if self.pre_shift_lock and o[-1] == request:
                                 raise UnderPreShiftLock
 			idx = o.index(request)
@@ -336,7 +337,7 @@ class Queue(Module):
 			     self.list[idx+1:idx+aa+1] +
 			     [self.list[idx]] +
 			     self.list[idx+aa+1:])
-			self.list = n if amount == aa else reversed(n)
+			self.list = n if amount == aa else list(reversed(n))
                 self.on_changed()
 
 class Orchestrator(Module):
