@@ -1,9 +1,0 @@
-includes:
-  - ../core
-definitions:
-  ajaxServer:
-    implementedBy: maried.ajax.AjaxServer
-    inherits: [ tcpSocketServer ]
-    settings:
-      port: {default: 8080}
-      desk: {type: classicDesk}
