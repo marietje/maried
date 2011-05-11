@@ -46,6 +46,9 @@ class MongoUser(AliasingMixin, User):
         def may_skip(self):
                 return self.level >= 5
         @property
+        def is_admin(self):
+                return self.level >= 5
+        @property
         def may_move(self):
                 return self.level >= 3
 	def check_password(self, password):
@@ -330,6 +333,8 @@ class MongoUsers(Users):
         def assert_addition(self, user, mediaFile):
                 pass
         def assert_cancel(self, user, request):
+                if user.is_admin:
+                        return
                 if request.by == user:
                         return
                 if not user.may_cancel:
