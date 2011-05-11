@@ -54,7 +54,7 @@ instances:
   mediaStore:
     module: mongoMediaStore
     db: mongoDb
-  requestServer::
+  requestServer:
     module: joyceRS
     desk: desk
     joyceServer: cometServer
