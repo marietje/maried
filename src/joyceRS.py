@@ -142,7 +142,7 @@ class MariedChannelClass(JoyceChannel):
                                         'message': 'Missing key or amount'})
                                 return
                         try:
-                                self.server.requests_ns.by_key(
+                                req = self.server.requests_ns.by_key(
                                         data['key'])
                         except KeyError:
                                 self.send_message({
@@ -153,6 +153,8 @@ class MariedChannelClass(JoyceChannel):
                                                         self.user))
                 elif data['type'] == 'list_media':
                         self.server._send_all_media((self,))
+                elif data['type'] == 'skip_playing':
+                        self.server.desk.skip_playing(self.user)
                 else:
                         self.send_message({
                                 'type': 'error',

@@ -195,6 +195,7 @@ class GstPlayer(Player):
                 self.next_stream = None
                 self.previous_wrapper = None
                 self.previous_stream = None
+                self.in_a_skip = False
                 self.readyEvent.set()
 
 	def queue(self, media):
@@ -241,10 +242,8 @@ class GstPlayer(Player):
 		tl[gst.TAG_TRACK_PEAK] = media.trackPeak
 		self.rg_event = gst.event_new_tag(tl)
 
-                # We're done
-
                 # Start playing -- if not already
-                if got_to_start_playing:
+                if got_to_start_playing or self.in_a_skip:
                         self.bin.set_state(gst.STATE_PLAYING)
                         self.idle = False
 
@@ -268,6 +267,8 @@ class GstPlayer(Player):
                 self.previous_stream, self.next_stream = self.next_stream, None
                 self.previous_wrapper, self.next_wrapper = \
                                                 self.next_wrapper, None
+                if self.in_a_skip:
+                        self.in_a_skip = False
 
                 # Notify the world
                 if not old_media is None:
@@ -304,6 +305,15 @@ class GstPlayer(Player):
                 # Notify the world
                 if not old_playing is None:
                         self.on_playing_finished(old_playing, old_endTime)
+
+        def skip(self):
+                with self.idleCond:
+                        if self.in_a_skip:
+                                raise RuntimeError, "Already skipping"
+                        self.l.debug('Skipping')
+                        self.in_a_skip = True
+                        self.bin.set_state(gst.STATE_NULL)
+                        self.on_about_to_finish()
 
         def _interrupt(self):
                 with self.idleCond:

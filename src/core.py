@@ -141,6 +141,15 @@ class Desk(Module):
 		self.collection.add(mediaFile, user, customInfo)
 	def list_requests(self):
 		return self.queue.requests
+        def skip_playing(self, user):
+                playing = self.orchestrator.get_playing()
+                # We check the end time to avoid to skip a race conditon
+                # and skip the next song.
+                if playing[2]  - datetime.datetime.now() \
+                                < datetime.timedelta(0, 1):
+                        raise Denied
+                self.users.assert_skip(user, playing[1])
+                self.orchestrator.skip()
 	def cancel_request(self, request, user):
 		self.users.assert_cancel(user, request)
 		request.cancel()
@@ -390,6 +399,9 @@ class Orchestrator(Module):
                         self.player.queue(media)
                 finally:
                         self.lock.release()
+
+        def skip(self):
+                self.player.skip()
 
         def _player_on_playing_finished(self, media, endTime):
                 with self.lock:

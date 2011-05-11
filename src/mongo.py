@@ -43,6 +43,9 @@ class MongoUser(AliasingMixin, User):
         def may_cancel(self):
                 return self.level >= 3
         @property
+        def may_skip(self):
+                return self.level >= 5
+        @property
         def may_move(self):
                 return self.level >= 3
 	def check_password(self, password):
@@ -335,6 +338,9 @@ class MongoUsers(Users):
                 if request.by == user and amount < 0:
                         return
                 if not user.may_move:
+                        raise Denied
+        def assert_skip(self, user, request):
+                if not user.may_skip:
                         raise Denied
         def by_key(self, key):
                 return self.collection._user_by_key(key)
