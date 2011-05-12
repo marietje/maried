@@ -337,16 +337,16 @@ class Queue(Module):
 	def move(self, request, amount):
 		aa = abs(amount)
 		with self.lock:
-			o = self.list if amount == aa else list(
+			o = self.list if amount != aa else list(
                                                 reversed(self.list))
                         if self.pre_shift_lock and o[-1] == request:
                                 raise UnderPreShiftLock
 			idx = o.index(request)
-			n = (self.list[:idx] + 
-			     self.list[idx+1:idx+aa+1] +
-			     [self.list[idx]] +
-			     self.list[idx+aa+1:])
-			self.list = n if amount == aa else list(reversed(n))
+			n = (o[:idx] +
+			     o[idx+1:idx+aa+1] +
+			     [o[idx]] +
+			     o[idx+aa+1:])
+			self.list = n if amount != aa else list(reversed(n))
                 self.on_changed()
 
 class Orchestrator(Module):
