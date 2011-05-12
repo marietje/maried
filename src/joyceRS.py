@@ -149,8 +149,8 @@ class MariedChannelClass(JoyceChannel):
                                         'type': 'error_move_request',
                                         'message': 'Request not found'})
                                 return
-                        self.server.desk.move_request(req, int(data['amount'],
-                                                        self.user))
+                        self.server.desk.move_request(req, data['amount'],
+                                                        self.user)
                 elif data['type'] == 'list_media':
                         self.server._send_all_media((self,))
                 elif data['type'] == 'skip_playing':
