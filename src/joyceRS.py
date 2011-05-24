@@ -14,8 +14,8 @@ from joyce.base import JoyceChannel
 
 
 class MariedChannelClass(JoyceChannel):
-	def __init__(self, server, *args, **kwargs):
-		super(MariedChannelClass, self).__init__(*args, **kwargs)
+        def __init__(self, server, *args, **kwargs):
+                super(MariedChannelClass, self).__init__(*args, **kwargs)
                 self.server = server
                 self.user = None
                 self.login_token = None
@@ -35,7 +35,7 @@ class MariedChannelClass(JoyceChannel):
                 mf = self.server.desk.add_media(stream, self.user)
                 self.l.info('Download finished: ' + repr(mf))
 
-	def handle_message(self, data):
+        def handle_message(self, data):
                 if data['type'] == 'follow':
                         for followed in data['which']:
                                 self.server._register_follower(self, followed)
@@ -166,24 +166,24 @@ class MariedChannelClass(JoyceChannel):
                 self.server._remove_follower(self)
 
 class JoyceRS(Module):
-	def __init__(self, *args, **kwargs):
-		super(JoyceRS, self).__init__(*args, **kwargs)
-		self.joyceServer.channel_class = self._channel_constructor
-		self.desk.on_media_changed.register(
-				self._on_media_changed)
-		self.desk.on_playing_changed.register(
-				self._on_playing_changed)
-		self.desk.on_requests_changed.register(
-				self._on_requests_changed)
+        def __init__(self, *args, **kwargs):
+                super(JoyceRS, self).__init__(*args, **kwargs)
+                self.joyceServer.channel_class = self._channel_constructor
+                self.desk.on_media_changed.register(
+                                self._on_media_changed)
+                self.desk.on_playing_changed.register(
+                                self._on_playing_changed)
+                self.desk.on_requests_changed.register(
+                                self._on_requests_changed)
                 self.following_lut = {
                                 'requests': (set(), self._send_all_requests),
                                 'playing': (set(), self._send_playing),
                                 'media': (set(), self._send_all_media)}
                 self.lock = threading.Lock()
                 self.requests_ns = self.refStore.create_namespace()
-	def _channel_constructor(self, *args, **kwargs):
-		return MariedChannelClass(self, *args, **kwargs)
-	def _on_media_changed(self, changeList):
+        def _channel_constructor(self, *args, **kwargs):
+                return MariedChannelClass(self, *args, **kwargs)
+        def _on_media_changed(self, changeList):
                 msg = {'type': 'media_changed'}
                 if changeList is None:
                         msg['changes'] = None
@@ -196,10 +196,10 @@ class JoyceRS(Module):
                                 'removed': [self._get_media_dict(m)
                                         for m in changeList.removed]}
                 for follower in self._followers_of('media'):
-		        follower.send_message(msg)
-	def _on_requests_changed(self):
+                        follower.send_message(msg)
+        def _on_requests_changed(self):
                 self._send_all_requests(self._followers_of('requests'))
-	def _on_playing_changed(self, previously_playing):
+        def _on_playing_changed(self, previously_playing):
                 self._send_playing(self._followers_of('playing'))
 
         def _get_media_dict(self, media):
@@ -208,8 +208,8 @@ class JoyceRS(Module):
                         'title': media.title,
                         'uploadedByKey': str(media.uploadedByKey),
                         'length': media.length}
-	def _send_playing(self, followers):
-		playing = self.desk.get_playing()
+        def _send_playing(self, followers):
+                playing = self.desk.get_playing()
                 msg = { 'type': 'playing',
                         'playing': {
                         'mediaKey': None if playing[0] is None

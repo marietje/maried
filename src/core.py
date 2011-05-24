@@ -16,77 +16,77 @@ ChangeList = collections.namedtuple('ChangeList', (
                 'added', 'updated', 'removed'))
 
 class Denied(Exception):
-	pass
+        pass
 class Stopped(Exception):
-	pass
+        pass
 class EmptyQueueException(Exception):
-	pass
+        pass
 class AlreadyInQueueError(Denied):
-	pass
+        pass
 class MaxQueueLengthExceededError(Denied):
-	pass
+        pass
 class MaxQueueCountExceededError(Denied):
-	pass
+        pass
 class UnderPreShiftLock(Denied):
         pass
 
 
 class Media(DictLike):
-	def __init__(self, coll, data):
-		super(Media, self).__init__(data)
-		self.self.coll = coll
-	def unlink(self):
-		self.coll.unlink_media(self)
-	def save(self):
-		self.coll.save_media(self)
-	@property
-	def mediaFile(self):
-		return self.coll.mediaStore.by_key(self.mediaFileKey)
-	def __eq__(self, other):
-		return self.key == other.key
-	def __ne__(self, other):
-		return self.key != other.key
+        def __init__(self, coll, data):
+                super(Media, self).__init__(data)
+                self.self.coll = coll
+        def unlink(self):
+                self.coll.unlink_media(self)
+        def save(self):
+                self.coll.save_media(self)
+        @property
+        def mediaFile(self):
+                return self.coll.mediaStore.by_key(self.mediaFileKey)
+        def __eq__(self, other):
+                return self.key == other.key
+        def __ne__(self, other):
+                return self.key != other.key
 
 
 class MediaFile(object):
-	def __init__(self, store, key):
-		self._key = key
-		self.store = store
-	def get_named_file(self):
-		raise NotImplementedError
-	def open(self):
-		raise NotImplementedError
-	def remove(self):
-		self.store.remove(self)
-	def __eq__(self, other):
-		return self._key == other.key
-	def __ne__(self, other):
-		return self._key != other.key
-	def get_info(self):
-		stream = self.open()
-		ret = self.store.mediaInfo.get_info(stream)
-		if hasattr(stream, 'close'):
-			stream.close()
-		return ret
-	@property
-	def key(self):
-		return self._key
+        def __init__(self, store, key):
+                self._key = key
+                self.store = store
+        def get_named_file(self):
+                raise NotImplementedError
+        def open(self):
+                raise NotImplementedError
+        def remove(self):
+                self.store.remove(self)
+        def __eq__(self, other):
+                return self._key == other.key
+        def __ne__(self, other):
+                return self._key != other.key
+        def get_info(self):
+                stream = self.open()
+                ret = self.store.mediaInfo.get_info(stream)
+                if hasattr(stream, 'close'):
+                        stream.close()
+                return ret
+        @property
+        def key(self):
+                return self._key
 class BaseRequest(DictLike):
-	pass
+        pass
 class PastRequest(BaseRequest):
-	def __init__(self, history, data):
-		super(PastRequest, self).__init__(data)
-		self.self.history = history
-	def remove(self):
-		raise NotImplementedError
+        def __init__(self, history, data):
+                super(PastRequest, self).__init__(data)
+                self.self.history = history
+        def remove(self):
+                raise NotImplementedError
 class Request(BaseRequest):
-	def __init__(self, queue, data):
-		super(Request, self).__init__(data)
-		self.self.queue = queue
-	def move(self, amount):
-		self.queue.move(self, amount)
-	def cancel(self):
-		self.queue.cancel(self)
+        def __init__(self, queue, data):
+                super(Request, self).__init__(data)
+                self.self.queue = queue
+        def move(self, amount):
+                self.queue.move(self, amount)
+        def cancel(self):
+                self.queue.cancel(self)
         @property
         def mediaKey(self):
                 return self.media.key
@@ -97,50 +97,50 @@ class Request(BaseRequest):
                 except AttributeError:
                         return None
 class User(DictLike):
-	def has_access(self):
-		raise NotImplementedError
-	def __eq__(self, other):
-		return self.key == other.key
-	def __ne__(self, other):
-		return self.key != other.key
+        def has_access(self):
+                raise NotImplementedError
+        def __eq__(self, other):
+                return self.key == other.key
+        def __ne__(self, other):
+                return self.key != other.key
 
 class Desk(Module):
-	def __init__(self, *args, **kwargs):
-		super(Desk, self).__init__(*args, **kwargs)
-		self.on_playing_changed = Event()
-		self.on_media_changed = Event()
-		self.on_requests_changed = Event()
-		self.orchestrator.on_playing_changed.register(
-				self._on_playing_changed)
-		self.collection.on_changed.register(
-				self._on_collection_changed)
+        def __init__(self, *args, **kwargs):
+                super(Desk, self).__init__(*args, **kwargs)
+                self.on_playing_changed = Event()
+                self.on_media_changed = Event()
+                self.on_requests_changed = Event()
+                self.orchestrator.on_playing_changed.register(
+                                self._on_playing_changed)
+                self.collection.on_changed.register(
+                                self._on_collection_changed)
                 self.queue.on_changed.register(
                                 self._on_requests_changed)
-	def _on_playing_changed(self, previous_playing):
-		self.on_playing_changed(previous_playing)
-	def _on_collection_changed(self, changeList):
-		self.on_media_changed(changeList)
-	def _on_requests_changed(self):
-		self.on_requests_changed()
-	def list_media(self):
-		return self.collection.media
-	def list_media_keys(self):
-		return self.collection.media_keys
+        def _on_playing_changed(self, previous_playing):
+                self.on_playing_changed(previous_playing)
+        def _on_collection_changed(self, changeList):
+                self.on_media_changed(changeList)
+        def _on_requests_changed(self):
+                self.on_requests_changed()
+        def list_media(self):
+                return self.collection.media
+        def list_media_keys(self):
+                return self.collection.media_keys
         def get_media_count(self):
                 return self.collection.media_count
-	def request_media(self, media, user):
-		self.users.assert_request(user, media)
-		self.queue.request(media, user)
-	def add_media(self, stream, user, customInfo=None):
-		mediaFile = self.mediaStore.create(stream)
-		try:
-			self.users.assert_addition(user, mediaFile)
-		except Denied:
-			mediaFile.remove()
-			raise
-		self.collection.add(mediaFile, user, customInfo)
-	def list_requests(self):
-		return self.queue.requests
+        def request_media(self, media, user):
+                self.users.assert_request(user, media)
+                self.queue.request(media, user)
+        def add_media(self, stream, user, customInfo=None):
+                mediaFile = self.mediaStore.create(stream)
+                try:
+                        self.users.assert_addition(user, mediaFile)
+                except Denied:
+                        mediaFile.remove()
+                        raise
+                self.collection.add(mediaFile, user, customInfo)
+        def list_requests(self):
+                return self.queue.requests
         def skip_playing(self, user):
                 playing = self.orchestrator.get_playing()
                 # We check the end time to avoid to skip a race conditon
@@ -150,61 +150,61 @@ class Desk(Module):
                         raise Denied
                 self.users.assert_skip(user, playing[1])
                 self.orchestrator.skip()
-	def cancel_request(self, request, user):
-		self.users.assert_cancel(user, request)
-		request.cancel()
-	def move_request(self, request, amount, user):
-		self.users.assert_move(user, request, amount)
-		request.move(amount)
-	def get_playing(self):
-		return self.orchestrator.get_playing()
-	def user_by_key(self, key):
-		return self.users.by_key(key)
-	def media_by_key(self, key):
-		return self.collection.by_key(key)
+        def cancel_request(self, request, user):
+                self.users.assert_cancel(user, request)
+                request.cancel()
+        def move_request(self, request, amount, user):
+                self.users.assert_move(user, request, amount)
+                request.move(amount)
+        def get_playing(self):
+                return self.orchestrator.get_playing()
+        def user_by_key(self, key):
+                return self.users.by_key(key)
+        def media_by_key(self, key):
+                return self.collection.by_key(key)
 
 class History(Module):
-	def __init__(self, *args, **kwargs):
-		super(History, self).__init__(*args, **kwargs)
-		# when a record is added runtime
-		self.on_record = Event()
-		# when the whole history is changed (db change, et al)
-		self.on_pretty_changed = Event()
-	def record(self, media, request, at):
-		raise NotImplementedError
-	def list_past_requests(self):
-		raise NotImplementedError
+        def __init__(self, *args, **kwargs):
+                super(History, self).__init__(*args, **kwargs)
+                # when a record is added runtime
+                self.on_record = Event()
+                # when the whole history is changed (db change, et al)
+                self.on_pretty_changed = Event()
+        def record(self, media, request, at):
+                raise NotImplementedError
+        def list_past_requests(self):
+                raise NotImplementedError
 
 class Users(Module):
-	def assert_request(self, user, media):
-		raise NotImplementedError
-	def assert_addition(self, user, mediaFile):
-		raise NotImplementedError
-	def assert_cancel(self, user, request):
-		raise NotImplementedError
-	def assert_move(self, user, request, amount):
-		raise NotImplementedError
-	def assert_access(self, user):
-		return NotImplementedError
-	def by_key(self, key):
-		return NotImplementedError
+        def assert_request(self, user, media):
+                raise NotImplementedError
+        def assert_addition(self, user, mediaFile):
+                raise NotImplementedError
+        def assert_cancel(self, user, request):
+                raise NotImplementedError
+        def assert_move(self, user, request, amount):
+                raise NotImplementedError
+        def assert_access(self, user):
+                return NotImplementedError
+        def by_key(self, key):
+                return NotImplementedError
 
 class RandomQueue(Module):
-	def __init__(self, *args, **kwargs):
-		super(RandomQueue, self).__init__(*args, **kwargs)
+        def __init__(self, *args, **kwargs):
+                super(RandomQueue, self).__init__(*args, **kwargs)
                 self.lock = threading.Lock()
-		self.list = list()
+                self.list = list()
                 self.on_changed = Event()
-		self.register_on_setting_changed('length', self.osc_length)
-		self.osc_length()
-		self.random.on_ready.register(self._random_on_ready)
+                self.register_on_setting_changed('length', self.osc_length)
+                self.osc_length()
+                self.random.on_ready.register(self._random_on_ready)
                 self.pre_shift_lock = False
-	def _random_on_ready(self):
+        def _random_on_ready(self):
                 with self.lock:
                         self._fill()
                 self.on_changed()
-	@property
-	def requests(self):
+        @property
+        def requests(self):
                 with self.lock:
                         return reversed(self.list)
         def peek(self, set_pre_shift_lock=False):
@@ -215,7 +215,7 @@ class RandomQueue(Module):
                         if set_pre_shift_lock:
                                 self.pre_shift_lock = True
                         return ret
-	def shift(self):
+        def shift(self):
                 with self.lock:
                         if not self.list:
                                 raise EmptyQueueException
@@ -224,37 +224,37 @@ class RandomQueue(Module):
                         self.pre_shift_lock = False
                 self.on_changed()
                 return ret
-	def _grow(self):
+        def _grow(self):
                 if self.random.ready:
                         self.list.insert(0, Request(self, {
                                 'media': self.random.pick()}))
-	def request(self, media, user):
-		assert False # shouldn't do that
-	def cancel(self, request):
+        def request(self, media, user):
+                assert False # shouldn't do that
+        def cancel(self, request):
                 with self.lock:
                         if self.pre_shift_lock and request == self.list[-1]:
                                 raise UnderPreShiftLock
                         self.list.remove(request)
                         self._grow()
                 self.on_changed()
-	def move(self, request, amount):
-		assert False # shouldn't do that
-	def osc_length(self):
+        def move(self, request, amount):
+                assert False # shouldn't do that
+        def osc_length(self):
                 with self.lock:
                         self._fill()
                 self.on_changed()
-	def _fill(self):
-		if not self.random.ready:
-			return
-		if len(self.list) < self.length:
-			for i in xrange(self.length - len(self.list)):
-				self._grow()
-		else:
-			self.list = self.list[:self.length]
+        def _fill(self):
+                if not self.random.ready:
+                        return
+                if len(self.list) < self.length:
+                        for i in xrange(self.length - len(self.list)):
+                                self._grow()
+                else:
+                        self.list = self.list[:self.length]
 
 class AmalgamatedQueue(Module):
-	def __init__(self, *args, **kwargs):
-		super(AmalgamatedQueue, self).__init__(*args, **kwargs)
+        def __init__(self, *args, **kwargs):
+                super(AmalgamatedQueue, self).__init__(*args, **kwargs)
                 self.on_changed = Event()
                 self.register_on_setting_changed('first', self.osc_first)
                 self.register_on_setting_changed('second', self.osc_second)
@@ -271,42 +271,42 @@ class AmalgamatedQueue(Module):
                 self.second.on_changed.register(self._subqueue_changed)
         def _subqueue_changed(self):
                 self.on_changed()
-	def request(self, media, user):
-		self.first.request(media, user)
-	@property
-	def requests(self):
-		return (tuple(self.first.requests) +
-			tuple(self.second.requests))
-	def shift(self):
-		assert False # shouldn't do that
-	def cancel(self, request):
-		if request in self.first.requests:
-			self.first.cancel(request)
-		else:
-			self.second.cancel(request)
-	def move(self, request, amount):
-		if request in self.first.requests:
-			self.first.move(request, amount)
-		else:
-			self.second.move(request, amount)
+        def request(self, media, user):
+                self.first.request(media, user)
+        @property
+        def requests(self):
+                return (tuple(self.first.requests) +
+                        tuple(self.second.requests))
+        def shift(self):
+                assert False # shouldn't do that
+        def cancel(self, request):
+                if request in self.first.requests:
+                        self.first.cancel(request)
+                else:
+                        self.second.cancel(request)
+        def move(self, request, amount):
+                if request in self.first.requests:
+                        self.first.move(request, amount)
+                else:
+                        self.second.move(request, amount)
 
 class Queue(Module):
-	def __init__(self, *args, **kwargs):
-		super(Queue, self).__init__(*args, **kwargs)
-		self.list = list()
-		self.lock = threading.Lock()
+        def __init__(self, *args, **kwargs):
+                super(Queue, self).__init__(*args, **kwargs)
+                self.list = list()
+                self.lock = threading.Lock()
                 self.on_changed = Event()
                 self.pre_shift_lock = False
-	def request(self, media, user):
-		with self.lock:
-			self.list.insert(0, Request(self, {
+        def request(self, media, user):
+                with self.lock:
+                        self.list.insert(0, Request(self, {
                                         'media': media,
                                         'by': user}))
                 self.on_changed()
-	@property
-	def requests(self):
-		with self.lock:
-			return reversed(self.list)
+        @property
+        def requests(self):
+                with self.lock:
+                        return reversed(self.list)
         def peek(self, set_pre_shift_lock=False):
                 """ Returns the first element in the Queue
 
@@ -320,42 +320,42 @@ class Queue(Module):
                         if set_pre_shift_lock:
                                 self.pre_shift_lock = True
                         return ret
-	def shift(self):
-		with self.lock:
-			if not self.list:
-				raise EmptyQueueException
-			ret = self.list.pop()
+        def shift(self):
+                with self.lock:
+                        if not self.list:
+                                raise EmptyQueueException
+                        ret = self.list.pop()
                         self.pre_shift_lock = False
                 self.on_changed()
                 return ret
-	def cancel(self, request):
-		with self.lock:
+        def cancel(self, request):
+                with self.lock:
                         if self.pre_shift_lock and self.list[-1] == request:
                                 raise UnderPreShiftLock
-			self.list.remove(request)
+                        self.list.remove(request)
                 self.on_changed()
-	def move(self, request, amount):
-		aa = abs(amount)
-		with self.lock:
-			o = self.list if amount != aa else list(
+        def move(self, request, amount):
+                aa = abs(amount)
+                with self.lock:
+                        o = self.list if amount != aa else list(
                                                 reversed(self.list))
                         if self.pre_shift_lock and o[-1] == request:
                                 raise UnderPreShiftLock
-			idx = o.index(request)
-			n = (o[:idx] +
-			     o[idx+1:idx+aa+1] +
-			     [o[idx]] +
-			     o[idx+aa+1:])
-			self.list = n if amount != aa else list(reversed(n))
+                        idx = o.index(request)
+                        n = (o[:idx] +
+                             o[idx+1:idx+aa+1] +
+                             [o[idx]] +
+                             o[idx+aa+1:])
+                        self.list = n if amount != aa else list(reversed(n))
                 self.on_changed()
 
 class Orchestrator(Module):
-	def __init__(self, *args, **kwargs):
-		super(Orchestrator, self).__init__(*args, **kwargs)
-		self.on_playing_changed = Event()
-		self.lock = threading.Lock()
-		self.playing_media = None
-		self.satisfied_request = None
+        def __init__(self, *args, **kwargs):
+                super(Orchestrator, self).__init__(*args, **kwargs)
+                self.on_playing_changed = Event()
+                self.lock = threading.Lock()
+                self.playing_media = None
+                self.satisfied_request = None
                 self.player.on_about_to_finish.register(
                                 self._player_on_about_to_finish)
                 self.player.on_playing_started.register(
@@ -367,19 +367,19 @@ class Orchestrator(Module):
                 self.next_playing_media = None
                 self.previously_playing = None
 
-	def get_playing(self):
-		with self.lock:
-			return (self.playing_media,
-				self.satisfied_request,
-				self.player.endTime)
+        def get_playing(self):
+                with self.lock:
+                        return (self.playing_media,
+                                self.satisfied_request,
+                                self.player.endTime)
         def run(self):
                 with self.lock:
                         self.running = True
                 self._queue_next()
 
-	def stop(self):
-		with self.lock:
-			self.running = False
+        def stop(self):
+                with self.lock:
+                        self.running = False
 
         def _queue_next(self):
                 self.lock.acquire()
@@ -442,71 +442,71 @@ class Orchestrator(Module):
 
         def _player_on_about_to_finish(self):
                 self._queue_next()
-	
-	def wait_for_media(self):
-		self.l.info("Randomqueue couldn't return media -- collection "+
-			    "is assumed to be empty -- waiting for media.")
-		self.randomQueue.random.collection.got_media_event.wait()
-		self.l.info("Woke!")
+        
+        def wait_for_media(self):
+                self.l.info("Randomqueue couldn't return media -- collection "+
+                            "is assumed to be empty -- waiting for media.")
+                self.randomQueue.random.collection.got_media_event.wait()
+                self.l.info("Woke!")
 
 class Random(Module):
-	def __init__(self, *args, **kwargs):
-		super(Random, self).__init__(*args, **kwargs)
-		self.cond = threading.Condition()
-		self.running = True
-		# used to push new PastRequest s to the worker thread
-		# None is used in the case of "history.on_pretty_changed"
-		self.recordStack = list()
-		self.on_ready = Event()
-		self.history.on_pretty_changed.register(
-				self._on_history_pretty_changed)
-		self.history.on_record.register(
-				self._on_history_record)
+        def __init__(self, *args, **kwargs):
+                super(Random, self).__init__(*args, **kwargs)
+                self.cond = threading.Condition()
+                self.running = True
+                # used to push new PastRequest s to the worker thread
+                # None is used in the case of "history.on_pretty_changed"
+                self.recordStack = list()
+                self.on_ready = Event()
+                self.history.on_pretty_changed.register(
+                                self._on_history_pretty_changed)
+                self.history.on_record.register(
+                                self._on_history_record)
 
-	def _on_history_pretty_changed(self):
-		with self.cond:
-			self.recordStack = [None]
-			self.cond.notify()
-	def _on_history_record(self, pr):
-		with self.cond:
-			self.recordStack.append(pr)
-			self.cond.notify()
+        def _on_history_pretty_changed(self):
+                with self.cond:
+                        self.recordStack = [None]
+                        self.cond.notify()
+        def _on_history_record(self, pr):
+                with self.cond:
+                        self.recordStack.append(pr)
+                        self.cond.notify()
 
-	def pick(self):
-		raise NotImplementedError
+        def pick(self):
+                raise NotImplementedError
 
-	def run(self):
-		while True:
-			with self.cond:
-				self.cond.wait()
-			if not self.running:
-				break
-			if len(self.recordStack) == 0:
-				continue
-			for pr in reversed(self.recordStack):
-				if pr is None:
-					self._handle_history_pretty_changed()
-				else:
-					self._handle_history_record(pr)
+        def run(self):
+                while True:
+                        with self.cond:
+                                self.cond.wait()
+                        if not self.running:
+                                break
+                        if len(self.recordStack) == 0:
+                                continue
+                        for pr in reversed(self.recordStack):
+                                if pr is None:
+                                        self._handle_history_pretty_changed()
+                                else:
+                                        self._handle_history_record(pr)
 
-	def stop(self):
-		self.running = False
-		with self.cond:
-			self.cond.notify()
-	
-	def _handle_history_record(self, pr):
-		raise NotImplementedError
-	def _handle_history_pretty_changed(self):
-		raise NotImplementedError
+        def stop(self):
+                self.running = False
+                with self.cond:
+                        self.cond.notify()
+        
+        def _handle_history_record(self, pr):
+                raise NotImplementedError
+        def _handle_history_pretty_changed(self):
+                raise NotImplementedError
 
 class SimpleRandom(Random):
-	def __init__(self, *args, **kwargs):
-		super(SimpleRandom, self).__init__(*args, **kwargs)
-		self.collection.on_keys_changed.register(
-				self.on_collection_keys_changed)
-		self.on_collection_keys_changed(None)
-	
-	def on_collection_keys_changed(self, changeList):
+        def __init__(self, *args, **kwargs):
+                super(SimpleRandom, self).__init__(*args, **kwargs)
+                self.collection.on_keys_changed.register(
+                                self.on_collection_keys_changed)
+                self.on_collection_keys_changed(None)
+        
+        def on_collection_keys_changed(self, changeList):
                 if changeList is None:
                         self.keys = self.collection.media_keys
                 else:
@@ -514,71 +514,71 @@ class SimpleRandom(Random):
                                 self.keys.remove(x)
                         for x in changeList.added:
                                 self.keys.append(x)
-		if len(self.keys) > 0:
-			self.on_ready()
+                if len(self.keys) > 0:
+                        self.on_ready()
 
-	def pick(self):
-		if len(self.keys) == 0:
-			return None
-		key = self.keys[random.randint(0, len(self.keys) - 1)]
-		return self.collection.by_key(key)
+        def pick(self):
+                if len(self.keys) == 0:
+                        return None
+                key = self.keys[random.randint(0, len(self.keys) - 1)]
+                return self.collection.by_key(key)
 
-	def _handle_history_record(self, pr):
-		pass
-	def _handle_history_pretty_changed(self):
-		pass
-	@property
-	def ready(self):
-		return len(self.keys) > 0
+        def _handle_history_record(self, pr):
+                pass
+        def _handle_history_pretty_changed(self):
+                pass
+        @property
+        def ready(self):
+                return len(self.keys) > 0
 
 class MediaInfo(Module):
-	def get_info(self, stream):
-		pass
-	def get_info_by_path(self, path):
-		with open(path) as f:
-			return self.get_info(f)
+        def get_info(self, stream):
+                pass
+        def get_info_by_path(self, path):
+                with open(path) as f:
+                        return self.get_info(f)
 
 class MediaStore(Module):
-	def create(self, stream):
-		raise NotImplementedError
-	def by_key(self, key):
-		raise NotImplementedError
-	@property
-	def keys(self):
-		raise NotImplementedError
+        def create(self, stream):
+                raise NotImplementedError
+        def by_key(self, key):
+                raise NotImplementedError
+        @property
+        def keys(self):
+                raise NotImplementedError
 
 class Player(Module):
-	def __init__(self, *args, **kwargs):
-		super(Player, self).__init__(*args, **kwargs)
-		self.endTime = None
+        def __init__(self, *args, **kwargs):
+                super(Player, self).__init__(*args, **kwargs)
+                self.endTime = None
                 self.on_about_to_finish = Event()
                 self.on_playing_started = Event()
                 self.on_playing_finished = Event()
-	def stop(self):
-		raise NotImplementedError
-	def queue(self, media):
-		raise NotImplementedError
+        def stop(self):
+                raise NotImplementedError
+        def queue(self, media):
+                raise NotImplementedError
 
 class Collection(Module):
-	def __init__(self, *args, **kwargs):
-		super(Collection, self).__init__(*args, **kwargs)
-		self.on_keys_changed = Event()
-		self.on_changed = Event()
-		# got_media_event is set when the Collection isn't
-		# empty.
-		self.got_media_event = threading.Event()
-	def add(self, mediaFile, user, extraInfo=None):
-		raise NotImplementedError
-	@property
-	def media(self):
-		raise NotImplementedError
-	@property
-	def media_keys(self):
-		raise NotImplementedError
-	def by_key(self, key):
-		raise NotImplementedError
-	def save_media(self, media):
-		raise NotImplementedError
-	def unlink_media(self, media):
-		raise NotImplementedError
+        def __init__(self, *args, **kwargs):
+                super(Collection, self).__init__(*args, **kwargs)
+                self.on_keys_changed = Event()
+                self.on_changed = Event()
+                # got_media_event is set when the Collection isn't
+                # empty.
+                self.got_media_event = threading.Event()
+        def add(self, mediaFile, user, extraInfo=None):
+                raise NotImplementedError
+        @property
+        def media(self):
+                raise NotImplementedError
+        @property
+        def media_keys(self):
+                raise NotImplementedError
+        def by_key(self, key):
+                raise NotImplementedError
+        def save_media(self, media):
+                raise NotImplementedError
+        def unlink_media(self, media):
+                raise NotImplementedError
 
