@@ -397,6 +397,9 @@ class Orchestrator(Module):
                         self.next_playing_media = media
                         self.next_satisfied_request = req
                         self.player.queue(media)
+                except Stopped:
+                        if self.running:
+                                self.l.exception("Unexpected stopped raised")
                 finally:
                         self.lock.release()
 
@@ -439,6 +442,9 @@ class Orchestrator(Module):
                                 self.lock.release()
                                 self.wait_for_media()
                                 self.lock.acquire()
+                                if not self.running:
+                                        self.l.info("    but we stopped")
+                                        return
 
         def _player_on_about_to_finish(self):
                 self._queue_next()
