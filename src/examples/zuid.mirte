@@ -6,6 +6,7 @@ includes:
   - maried/lastfm
   - maried/mongo
   - maried/joyceRS
+  - maried/bertha
   - joyce/comet
 instances:
   threadPool:
@@ -52,8 +53,7 @@ instances:
   mongoDb:
     module: mongoDb
   mediaStore:
-    module: mongoMediaStore
-    db: mongoDb
+    module: berthaMediaStore
   requestServer:
     module: joyceRS
     desk: desk

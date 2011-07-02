@@ -1,0 +1,10 @@
+includes:
+  - core
+definitions:
+  berthaMediaStore:
+    implementedBy: maried.bertha.BerthaMediaStore
+    inherits: [mediaStore]
+    settings:
+      threadPool: {type: threadPool}
+      host: {type: str, default: localhost}
+      port: {type: str, default: 10819}
