@@ -16,5 +16,6 @@ setup(name='maried',
       install_requires = ['docutils>=0.3',
                           'mirte>=0.1.0a2',
                           'sarah>=0.1.0a2',
+                          'bertha>=0.1.0a1',
                           'joyce>=0.1.0a2'],
       )
