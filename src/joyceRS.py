@@ -81,6 +81,11 @@ class MariedChannelClass(JoyceChannel):
                                         'type': 'error_'+data['type'],
                                         'message': 'Secret not set'})
                                 return
+                        if self.login_token is None:
+                                self.send_message({
+                                        'type': 'error_'+data['type'],
+                                        'message': 'No login_token requested'})
+                                return
                         expected_hash = hashlib.md5(secret +
                                                 self.login_token).hexdigest()
                         if expected_hash != data['hash']:
