@@ -35,7 +35,7 @@ class MariedChannelClass(JoyceChannel):
                 try:
                         mf = self.server.desk.add_media(stream, self.user)
                         self.l.info('Download finished: ' + repr(mf))
-                except TagsMissingError:
+                except MissingTagsError:
                         self.send_message({
                                 'type': 'error_upload',
                                 'message': 'Your upload missed some tags'})
