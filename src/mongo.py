@@ -192,6 +192,7 @@ class MongoCollection(Collection):
                         added=(key,), updated=(), removed=()))
                 self.on_changed(ChangeList(
                         added=(self._media[key],), updated=(), removed=()))
+                return self._media[key]
         
         def _unlink_media(self, media):
                 with self.lock:

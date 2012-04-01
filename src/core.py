@@ -138,7 +138,7 @@ class Desk(Module):
                 except Denied:
                         mediaFile.remove()
                         raise
-                self.collection.add(mediaFile, user, customInfo)
+                return self.collection.add(mediaFile, user, customInfo)
         def list_requests(self):
                 return self.queue.requests
         def skip_playing(self, user):
