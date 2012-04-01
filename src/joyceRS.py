@@ -34,6 +34,7 @@ class MariedChannelClass(JoyceChannel):
                 self.l.info('Download started')
                 mf = self.server.desk.add_media(stream, self.user)
                 self.l.info('Download finished: ' + repr(mf))
+                stream.close()
 
         def handle_message(self, data):
                 if data['type'] == 'follow':
