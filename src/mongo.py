@@ -3,7 +3,7 @@ from __future__ import with_statement
 from maried.core import MediaStore, MediaFile, Media, Collection, User, Users, \
                         History, Request, PastRequest, Denied, \
                         AlreadyInQueueError, MaxQueueLengthExceededError, \
-                        ChangeList
+                        ChangeList, MissingTagsError
 from mirte.core import Module
 from sarah.event import Event
 from sarah.dictlike import AliasingMixin
@@ -182,6 +182,8 @@ class MongoCollection(Collection):
                         'mediaFileKey': mediaFile.key,
                         'uploadedTimestamp': time.time(),
                         'uploadedByKey': user.key})
+                if not 'artist' in info or not 'title' in info:
+                        raise MissingTagsError
                 key = self.cMedia.insert(MongoMedia.normalize_dict(info))
                 info['_id'] = key
                 with self.lock:

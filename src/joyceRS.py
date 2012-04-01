@@ -5,7 +5,7 @@ import hashlib
 import threading
 
 import maried
-from maried.core import AlreadyInQueueError, Denied
+from maried.core import AlreadyInQueueError, Denied, MissingTagsError
 
 from mirte.core import Module
 from sarah.event import Event
@@ -32,9 +32,19 @@ class MariedChannelClass(JoyceChannel):
                                 'message': 'Please log in before uploading'})
                         return
                 self.l.info('Download started')
-                mf = self.server.desk.add_media(stream, self.user)
-                self.l.info('Download finished: ' + repr(mf))
-                stream.close()
+                try:
+                        mf = self.server.desk.add_media(stream, self.user)
+                        self.l.info('Download finished: ' + repr(mf))
+                except TagsMissingError:
+                        self.send_message({
+                                'type': 'error_upload',
+                                'message': 'Your upload missed some tags'})
+                except Denied:
+                        self.send_message({
+                                'type': 'error_upload',
+                                'message': 'Your upload was denied'})
+                finally:
+                        stream.close()
 
         def handle_message(self, data):
                 if data['type'] == 'follow':

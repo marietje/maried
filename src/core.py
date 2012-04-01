@@ -21,6 +21,8 @@ class Stopped(Exception):
         pass
 class EmptyQueueException(Exception):
         pass
+class MissingTagsError(Denied):
+        pass
 class AlreadyInQueueError(Denied):
         pass
 class MaxQueueLengthExceededError(Denied):
@@ -138,7 +140,11 @@ class Desk(Module):
                 except Denied:
                         mediaFile.remove()
                         raise
-                return self.collection.add(mediaFile, user, customInfo)
+                try:
+                        return self.collection.add(mediaFile, user, customInfo)
+                except Exception, e:
+                        mediaFile.remove()
+                        raise e
         def list_requests(self):
                 return self.queue.requests
         def skip_playing(self, user):
