@@ -1,7 +1,7 @@
 from __future__ import with_statement
 
-# gtk, gst, gobject and pygst are imported in GtkMainLoop.run
-gtk, gst, gobject, pygst = None, None, None, None
+# gst, gobject and pygst are imported in GtkMainLoop.run
+gst, gobject, pygst = None, None, None
 
 import time
 import os.path
@@ -19,18 +19,18 @@ class GtkMainLoop(Module):
                 self.ready = threading.Event()
         def run(self):
                 self.do_imports()
-                gtk.gdk.threads_init()
+                gobject.threads_init()
+                self.loop = gobject.MainLoop()
                 self.ready.set()
-                gtk.main()
+                self.loop.run()
         def do_imports(self):
-                global gtk, gst, gobject, pygst
-                import gtk as _gtk
+                global gst, gobject, pygst
                 import gst as _gst
                 import gobject as _gobject
                 import pygst as _pygst
-                gtk, gst, gobject, pygst = _gtk, _gst, _gobject, _pygst
+                gst, gobject, pygst = _gst, _gobject, _pygst
         def stop(self):
-                gtk.main_quit()
+                self.loop.quit()
 
 class GstMediaInfo(MediaInfo):
         class Job(object):
