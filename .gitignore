@@ -1,6 +1,7 @@
 *.pyo
 *.pyc
 *.swp
+.*.mirte.msgpack
 /*.egg-info
 /build
 /dist
