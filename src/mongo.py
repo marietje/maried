@@ -346,7 +346,7 @@ class MongoUsers(Users):
                 if not user.may_cancel:
                         raise Denied
         def assert_move(self, user, request, amount):
-                if request.by == user and amount < 0:
+                if request.by == user and amount > 0:
                         return
                 if not user.may_move:
                         raise Denied
