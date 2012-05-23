@@ -233,7 +233,8 @@ class RandomQueue(Module):
         def _grow(self):
                 if self.random.ready:
                         self.list.insert(0, Request(self, {
-                                'media': self.random.pick()}))
+                                'media': self.random.pick(),
+                                'by': None}))
         def request(self, media, user):
                 assert False # shouldn't do that
         def cancel(self, request):
