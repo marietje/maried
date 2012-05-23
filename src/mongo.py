@@ -8,7 +8,10 @@ from mirte.core import Module
 from sarah.event import Event
 from sarah.dictlike import AliasingMixin
 
-from pymongo.objectid import ObjectId
+try:
+        from pymongo.objectid import ObjectId
+except ImportError:
+        from bson import ObjectId
 
 import threading
 import tempfile
