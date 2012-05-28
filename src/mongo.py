@@ -3,7 +3,7 @@ from __future__ import with_statement
 from maried.core import MediaStore, MediaFile, Media, Collection, User, Users, \
                         History, Request, PastRequest, Denied, \
                         AlreadyInQueueError, MaxQueueLengthExceededError, \
-                        ChangeList, MissingTagsError
+                        ChangeList, MissingTagsError, Random
 from mirte.core import Module
 from sarah.event import Event
 from sarah.dictlike import AliasingMixin
@@ -17,6 +17,7 @@ import threading
 import tempfile
 import pymongo
 import hashlib
+import random
 import gridfs
 import base64
 import time
@@ -72,6 +73,7 @@ class MongoMedia(AliasingMixin, Media):
                    'length': 'l',
                    'mediaFileKey': 'k',
                    'uploadedByKey': 'ub',
+                   'randomOffset': 'r',
                    'uploadedTimestamp': 'ut'}
         def __init__(self, coll, data):
                 super(MongoMedia, self).__init__(coll,
@@ -181,6 +183,7 @@ class MongoCollection(Collection):
                 info.update({
                         'mediaFileKey': mediaFile.key,
                         'uploadedTimestamp': time.time(),
+                        'randomOffset': random.random(),
                         'uploadedByKey': user.key})
                 if not 'artist' in info or not 'title' in info:
                         raise MissingTagsError
@@ -199,6 +202,17 @@ class MongoCollection(Collection):
 
         def _save_user(self, user):
                 self.cUsers.save(user.to_dict())
+
+        def _pick_random_media(self):
+                offset = random.random()
+                d = self.cMedia.find_one({'r': {'$gte': offset}},
+                                sort=[('r', -1)])
+                if d is None:
+                        d = self.cMedia.find_one({'r': {'$lt': offset}},
+                                        sort=[('r', 1)])
+                        if d is None:
+                                return None
+                return MongoMedia(self, d)
 
 class MongoMediaStore(MediaStore):
         def __init__(self, *args, **kwargs):
@@ -342,3 +356,12 @@ class MongoUsers(Users):
                         raise Denied
         def by_key(self, key):
                 return self.collection._user_by_key(key)
+
+class MongoSimpleRandom(Random):
+        def pick(self):
+                ret = self.collection._pick_random_media()
+                if ret is None:
+                        self.l.info("Waiting on collection.got_media_event")
+                        self.collection.got_media_event.wait()
+                        ret = self.colleciton._pick_random_media()
+                return ret

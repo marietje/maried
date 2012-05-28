@@ -41,7 +41,7 @@ instances:
   queue:
     module: queue
   random:
-    module: simpleRandom
+    module: mongoSimpleRandom
     collection: collection
   users:
     module: mongoUsers
