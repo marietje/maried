@@ -220,10 +220,10 @@ class MongoCollection(Collection):
         def _pick_random_media(self):
                 offset = random.random()
                 d = self.cMedia.find_one({'r': {'$gte': offset}},
-                                sort=[('r', -1)])
+                                sort=[('r', 1)])
                 if d is None:
                         d = self.cMedia.find_one({'r': {'$lt': offset}},
-                                        sort=[('r', 1)])
+                                        sort=[('r', -1)])
                         if d is None:
                                 return None
                 return MongoMedia(self, d)
