@@ -21,34 +21,16 @@ class BerthaMediaStore(MediaStore):
 		super(BerthaMediaStore, self).__init__(settings, logger)
 		self.register_on_setting_changed('host', self.osc_creds)
 		self.register_on_setting_changed('port', self.osc_creds)
-		self.ready = False
-		self.keysCond = threading.Condition()
-		self._keys = None
 		self.osc_creds()
 
 	def osc_creds(self):
 		self.c = BerthaClient(self.host, self.port)
-		self.threadPool.execute(self._do_refresh_keys)
-
-	def _do_refresh_keys(self):
-		with self.keysCond:
-			self._keys = set(self.c.list())
-			self.l.info("Got %s keys" % len(self._keys))
-			self.keysCond.notifyAll()
 
 	def create(self, stream):
 		key = self.c.put_file(stream)
-		with self.keysCond:
-			self._keys.add(key)
 		return self.by_key(key)
 
 	def by_key(self, key):
-		with self.keysCond:
-			if self._keys is None:
-				self.l.debug("by_key: waiting on keysCond")
-				self.keysCond.wait()
-			if not key in self._keys:
-				raise KeyError, key
 		return BerthaMediaFile(self, key)
 
 	def remove(self, mediaFile):
@@ -63,8 +45,4 @@ class BerthaMediaStore(MediaStore):
 	
 	@property
 	def keys(self):
-		with self.keysCond:
-			if self._keys is None:
-				self.l.debug("keys: waiting on keysCond")
-				self.keysCond.wait()
-			return tuple(self._keys)
+                return self.c.list()
