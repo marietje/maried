@@ -256,7 +256,7 @@ class JoyceRS(Module):
                         follower.send_message({
                                 'type': 'media',
                                 'count': self.desk.get_media_count()})
-                for ms in iter_by_n(self.desk.list_media(), 2):
+                for ms in iter_by_n(self.desk.list_media(), 250):
                         msg = {
                                 'type': 'media_part',
                                 'part': [self._get_media_dict(m) for m in ms]}
