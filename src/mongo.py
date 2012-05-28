@@ -132,8 +132,8 @@ class MongoCollection(Collection):
                 if not self.db.ready:
                         return
                 with self.lock:
-                        self.cMedia = self.db.db['media']
-                        self.cUsers = self.db.db['users']
+                        self.cMedia = self.db.db[self.mediaCollection]
+                        self.cUsers = self.db.db[self.usersCollection]
                         self._media = {}
                         self.users = {}
                         for tmp in self.cMedia.find():
@@ -307,7 +307,7 @@ class MongoHistory(History):
         def _on_db_changed(self):
                 if not self.db.ready:
                         return
-                self.cHistory = self.db.db['history']
+                self.cHistory = self.db.db[self.collection]
                 self.on_pretty_changed()
         
         def record(self, media, request, at):

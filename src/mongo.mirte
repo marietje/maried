@@ -19,11 +19,14 @@ definitions:
     inherits: [collection]
     settings:
       db: {type: mongoDb}
+      mediaCollection: {type: str, default: media}
+      usersCollection: {type: str, default: media}
   mongoHistory:
     implementedBy: maried.mongo.MongoHistory
     inherits: [history]
     settings:
       db: {type: mongoDb}
+      collection: {type: str, default: history}
   mongoUsers:
     implementedBy: maried.mongo.MongoUsers
     inherits: [users]
