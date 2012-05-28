@@ -483,84 +483,40 @@ class Orchestrator(Module):
 class Random(Module):
         def __init__(self, *args, **kwargs):
                 super(Random, self).__init__(*args, **kwargs)
-                self.cond = threading.Condition()
-                self.running = True
-                # used to push new PastRequest s to the worker thread
-                # None is used in the case of "history.on_pretty_changed"
-                self.recordStack = list()
                 self.on_ready = Event()
-                self.history.on_pretty_changed.register(
-                                self._on_history_pretty_changed)
-                self.history.on_record.register(
-                                self._on_history_record)
-
-        def _on_history_pretty_changed(self):
-                with self.cond:
-                        self.recordStack = [None]
-                        self.cond.notify()
-        def _on_history_record(self, pr):
-                with self.cond:
-                        self.recordStack.append(pr)
-                        self.cond.notify()
-
         def pick(self):
                 raise NotImplementedError
-
-        def run(self):
-                while True:
-                        with self.cond:
-                                self.cond.wait()
-                        if not self.running:
-                                break
-                        if len(self.recordStack) == 0:
-                                continue
-                        for pr in reversed(self.recordStack):
-                                if pr is None:
-                                        self._handle_history_pretty_changed()
-                                else:
-                                        self._handle_history_record(pr)
-
-        def stop(self):
-                self.running = False
-                with self.cond:
-                        self.cond.notify()
-        
-        def _handle_history_record(self, pr):
-                raise NotImplementedError
-        def _handle_history_pretty_changed(self):
-                raise NotImplementedError
+        @property
+        def ready(self):
+                return True
 
 class SimpleRandom(Random):
         def __init__(self, *args, **kwargs):
                 super(SimpleRandom, self).__init__(*args, **kwargs)
-                self.collection.on_keys_changed.register(
-                                self.on_collection_keys_changed)
-                self.on_collection_keys_changed(None)
-        
-        def on_collection_keys_changed(self, changeList):
-                if changeList is None:
-                        self.keys = self.collection.media_keys
-                else:
-                        for x in changeList.removed:
-                                self.keys.remove(x)
-                        for x in changeList.added:
-                                self.keys.append(x)
-                if len(self.keys) > 0:
+                self.keys = None
+                self.lock = threading.Lock()
+                self.register_on_setting_changed('colleciton',
+                                self.osc_collection)
+                self.osc_collection()
+        def osc_collection(self):
+                self.collection.on_changed.register(self._on_collection_changed)
+                self._on_collection_changed()
+        def _on_collection_changed(self):
+                self.l.debug("Caching keys")
+                keys = list(self.collection.media_keys)
+                self.l.debug("Cached %s keys", len(keys))
+                with self.lock:
+                        signal_ready = self.keys is None
+                        self.keys = keys
+                if signal_ready:
                         self.on_ready()
-
         def pick(self):
-                if len(self.keys) == 0:
-                        return None
-                key = self.keys[random.randint(0, len(self.keys) - 1)]
-                return self.collection.by_key(key)
-
-        def _handle_history_record(self, pr):
-                pass
-        def _handle_history_pretty_changed(self):
-                pass
+                return self.collection.by_key(
+                                self.keys[random.randint(0,len(self.keys)-1)])
         @property
         def ready(self):
-                return len(self.keys) > 0
+                with self.lock:
+                        return self.keys is not None
 
 class MediaInfo(Module):
         def get_info(self, stream):

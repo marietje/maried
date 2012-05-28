@@ -52,13 +52,11 @@ definitions:
       length: {type: int, default: 5}
       random: {type: random}
   random:
-    run: true
     settings:
       collection: {type: collection}
-      history: {type: history}
   simpleRandom:
+    inherits: [ random ]
     implementedBy: maried.core.SimpleRandom
-    inherits: [random]
   requestServer:
     implementedBy: maried.core.RequestServer
     run: true
