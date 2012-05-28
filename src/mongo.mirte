@@ -20,7 +20,7 @@ definitions:
     settings:
       db: {type: mongoDb}
       mediaCollection: {type: str, default: media}
-      usersCollection: {type: str, default: media}
+      usersCollection: {type: str, default: users}
   mongoHistory:
     implementedBy: maried.mongo.MongoHistory
     inherits: [history]

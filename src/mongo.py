@@ -122,6 +122,10 @@ class MongoCollection(Collection):
                 self._media = None
                 self.lock = threading.Lock()
                 self.register_on_setting_changed('db', self.osc_db)
+                self.register_on_setting_changed('mediaCollection',
+                                        self.on_db_changed)
+                self.register_on_setting_changed('usersCollection',
+                                        self.on_db_changed)
                 self.osc_db()
         
         def osc_db(self):
@@ -132,47 +136,40 @@ class MongoCollection(Collection):
                 if not self.db.ready:
                         return
                 with self.lock:
-                        self.cMedia = self.db.db[self.mediaCollection]
                         self.cUsers = self.db.db[self.usersCollection]
-                        self._media = {}
-                        self.users = {}
-                        for tmp in self.cMedia.find():
-                                self._media[tmp['_id']] = MongoMedia(self, tmp)
-                        for tmp in self.cUsers.find():
-                                self.users[tmp['_id']] = MongoUser(self, tmp)
-                self.l.info("Cached %s media %s users" % (len(self._media),
-                                                          len(self.users)))
-                self.on_keys_changed(None)
-                self.on_changed(None)
-                with self.lock:
-                        if len(self._media) > 0:
+                        self.cMedia = self.db.db[self.mediaCollection]
+                        if self.cMedia.count():
                                 self.got_media_event.set()
                         else:
                                 self.got_media_event.clear()
         
         @property
         def media(self):
-                if self._media is None:
-                        return list()
-                return self._media.itervalues()
+                for d in self.cMedia.find():
+                        yield MongoMedia(self, d)
 
         @property
         def media_keys(self):
-                if self._media is None:
-                        return list()
-                return self._media.keys()
+                for d in self.cMedia.find({},{}):
+                        yield d['_id']
 
         @property
         def media_count(self):
-                return len(self._media)
+                return self.cMedia.count()
 
         def by_key(self, key):
                 if isinstance(key, basestring):
                         key = ObjectId(key)
-                return self._media[key]
+                d = self.cMedia.find_one({'_id': key})
+                if d is None:
+                        raise KeyError
+                return MongoMedia(self, d)
 
         def _user_by_key(self, key):
-                return self.users[key]
+                d = self.cUsers.find_one({'_id': key})
+                if d is None:
+                        raise KeyError
+                return MongoUser(self, d)
 
         def stop(self):
                 self.got_media_event.set()
@@ -190,26 +187,15 @@ class MongoCollection(Collection):
                 key = self.cMedia.insert(MongoMedia.normalize_dict(info))
                 info['_id'] = key
                 with self.lock:
-                        self._media[key] = MongoMedia(self, info)
-                        if len(self._media) == 1:
+                        if not self.got_media_event.is_set():
                                 self.got_media_event.set()
-                self.on_keys_changed(ChangeList(
-                        added=(key,), updated=(), removed=()))
-                self.on_changed(ChangeList(
-                        added=(self._media[key],), updated=(), removed=()))
-                return self._media[key]
+                return MongoMedia(self, info)
         
         def _unlink_media(self, media):
-                with self.lock:
-                        del(self._media[media.key])
                 self.cMedia.remove({'_id': media.key})
-                self.db.on_keys_changed(added=(), updated=(),
-                                removed=(media.key,))
-                self.on_changed(added=(), updated=(), removed=(media,))
         
         def _save_media(self, media):
                 self.cMedia.save(media.to_dict())
-                self.on_changed(added=(), updated=(media,), removed=())
 
         def _save_user(self, user):
                 self.cUsers.save(user.to_dict())
