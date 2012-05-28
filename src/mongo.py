@@ -6,7 +6,7 @@ from maried.core import MediaStore, MediaFile, Media, Collection, User, Users, \
                         ChangeList, MissingTagsError, Random
 from mirte.core import Module
 from sarah.event import Event
-from sarah.dictlike import AliasingMixin
+from sarah.dictlike import AliasingMixin, AliasingDictLike
 
 try:
         from pymongo.objectid import ObjectId
@@ -14,6 +14,7 @@ except ImportError:
         from bson import ObjectId
 
 import threading
+import itertools
 import tempfile
 import pymongo
 import hashlib
@@ -64,6 +65,15 @@ class MongoUser(AliasingMixin, User):
         def save(self):
                 self.collection._save_user(self)
 
+class MongoQuery(AliasingDictLike):
+        aliases = {'query': '_id',
+                   'is_cached': 'c',
+                   'last_used': 'l',
+                   'times_used': 't',
+                   'nMatches': 'n',
+                   'last_used_indirectly': 'L',
+                   'times_used_indirectly': 'T'}
+
 class MongoMedia(AliasingMixin, Media):
         aliases = {'key': '_id',
                    'artist': 'a',
@@ -74,6 +84,7 @@ class MongoMedia(AliasingMixin, Media):
                    'mediaFileKey': 'k',
                    'uploadedByKey': 'ub',
                    'randomOffset': 'r',
+                   'queryCache': 'qc',
                    'uploadedTimestamp': 'ut'}
         def __init__(self, coll, data):
                 super(MongoMedia, self).__init__(coll,
@@ -128,6 +139,8 @@ class MongoCollection(Collection):
                                         self.on_db_changed)
                 self.register_on_setting_changed('usersCollection',
                                         self.on_db_changed)
+                self.register_on_setting_changed('queriesCollection',
+                                        self.on_db_changed)
                 self.osc_db()
         
         def osc_db(self):
@@ -140,6 +153,7 @@ class MongoCollection(Collection):
                 with self.lock:
                         self.cUsers = self.db.db[self.usersCollection]
                         self.cMedia = self.db.db[self.mediaCollection]
+                        self.cQueries = self.db.db[self.queriesCollection]
                         if self.cMedia.count():
                                 self.got_media_event.set()
                         else:
@@ -213,6 +227,124 @@ class MongoCollection(Collection):
                         if d is None:
                                 return None
                 return MongoMedia(self, d)
+
+        def query(self, query, skip=0, count=None):
+                start_time = time.time()
+                # There are three cases.
+                #   (I)   This exact query is cached
+                #   (II)  A prefix of this query is cached (eg. we want `them',
+                #         but only `the' is cached.
+                #   (III) The query and none of its prefixes are cached.
+                # First, find out in which case we are.
+                qs = [MongoQuery(d) for d in self.cQueries.find({'_id':
+                        {'$in': [query[:n] for n in xrange(1,len(query)+1)]}})]
+                qs.sort(key=lambda q: -len(q.query))
+                cached_qs = filter(lambda q: q.is_cached, qs)
+                query_dict = {}
+                # TODO The query `hed bartender' should match
+                #       (hed) PE - Bartender
+                if not cached_qs or cached_qs[0].query != query:
+                        # We are not in case (I), thus we need to search.
+                        query_dict.update({
+                                '$or': [{'a': {'$regex': query,
+                                                    '$options': 'i'}},
+                                        {'t': {'$regex': query,
+                                                   '$options': 'i'}}]})
+                if cached_qs:
+                        # We are in case (I) or (II), thus we can reduce
+                        # the search space with the prefix cached_qs[0].query.
+                        query_dict.update({
+                                'qc': cached_qs[0].query})
+                if cached_qs and cached_qs[0].query == query:
+                        # We are in case (I).
+                        # The following is equivalent to
+                        #  q = cached_qs[0]
+                        #  q.last_used = time.time()
+                        #  q.times_used += 1
+                        #  self.cQueries.save(q.to_dict())
+                        self.cQueries.update(
+                                {'_id': cached_qs[0].query},
+                                {'$inc': 't',       # times_used
+                                 'l': time.time()}) # last_used
+                        ret = [MongoMedia(self, d)
+                                for d in self.cMedia.find(query_dict, skip=skip,
+                                        limit=(0 if count is None else count))]
+                        time_spent = time.time() - start_time
+                        self.l.debug("query %s directly from cache; "+
+                                        "%s results; %s seconds",
+                                        repr(query), len(ret), time_spent)
+                        return ret
+                if cached_qs:
+                        # We are in case (II).
+                        # The following is equivalent to
+                        #  q = cached_qs[0]
+                        #  q.last_used_indirectly = time.time()
+                        #  q.times_used_indirectly += 1
+                        #  self.cQueries.save(q.to_dict())
+                        self.cQueries.update(
+                                {'_id': cached_qs[0].query},
+                                {'$inc': 'T',       # times_used_ind.
+                                 'L': time.time()}) # last_used_ind.
+                # We are in case (II) or (III).
+                if ((cached_qs and cached_qs[0].query != query
+                                and cached_qs[0].nMatches
+                                        >= self.queryCacheMinSearch) or
+                                        not cached_qs):
+                        # We need to search through a lot of results.  Thus we
+                        # are going to cache this query.
+                        self.cMedia.update(query_dict,
+                                        {'$push': {'qc': query}}, multi=True)
+                        nMatches = self.cMedia.find({'qc': query}).count()
+                        if qs and qs[0].query == query:
+                                q = qs[0]
+                                q.last_used = time.time()
+                                q.times_used += 1
+                                q.is_cached = True
+                                q.nMatches = nMatches
+                        else:
+                                q = MongoQuery({
+                                        '_id': query,
+                                        'last_used': time.time(),
+                                        'times_used': 1,
+                                        'nMatches': nMatches,
+                                        'last_used_indirectly': None,
+                                        'times_used_indirectly': 0,
+                                        'is_cached': True})
+                        self.cQueries.save(q.to_dict())
+                        ret = [MongoMedia(self, d)
+                                for d in self.cMedia.find({'qc': query},
+                                        skip=skip, limit=(0 if count is None
+                                                        else count))]
+                        time_spent = time.time() - start_time
+                        self.l.debug("query %s new in cache; used %s; "+
+                                        "%s results; %s seconds",
+                                        repr(query), repr(cached_qs[0].query
+                                                if cached_qs else ''),
+                                        len(ret), time_spent)
+                        return ret
+                ret = [MongoMedia(self, d) for d in
+                                self.cMedia.find(query_dict, skip=skip,
+                                        limit=(0 if count is None else count))]
+                if qs and qs[0].query == query:
+                        q = qs[0]
+                        q.last_used = time.time()
+                        q.times_used += 1
+                else:
+                        q = MongoQuery({
+                                '_id': query,
+                                'last_used': time.time(),
+                                'times_used': 1,
+                                'last_used_indirectly': None,
+                                'times_used_indirectly': 0,
+                                'is_cached': False})
+                self.cQueries.save(q.to_dict())
+                time_spent = time.time() - start_time
+                self.l.debug("query %s; used %s; "+
+                                "%s results; %s seconds",
+                                repr(query), repr(cached_qs[0].query
+                                        if cached_qs else ''),
+                                len(ret), time_spent)
+                return ret
 
 class MongoMediaStore(MediaStore):
         def __init__(self, *args, **kwargs):

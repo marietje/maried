@@ -21,6 +21,9 @@ definitions:
       db: {type: mongoDb}
       mediaCollection: {type: str, default: media}
       usersCollection: {type: str, default: users}
+      queriesCollection: {type: str, default: queries}
+      queryCacheMinSearch: {type: int, default: 256}
+      threadPool: {type: threadPool}
   mongoHistory:
     implementedBy: maried.mongo.MongoHistory
     inherits: [history]
