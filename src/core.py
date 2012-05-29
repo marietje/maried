@@ -162,6 +162,8 @@ class Desk(Module):
                 except Exception, e:
                         mediaFile.remove()
                         raise e
+        def query_media(self, query, skip=0, count=None):
+                return self.collection.query(query, skip, count)
         def list_requests(self):
                 return self.queue.requests
         def skip_playing(self, user):

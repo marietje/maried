@@ -178,6 +178,15 @@ class MariedChannelClass(JoyceChannel):
                         self.server._send_all_media((self,))
                 elif data['type'] == 'skip_playing':
                         self.server.desk.skip_playing(self.user)
+                elif data['type'] == 'query_media':
+                        self.send_message({
+                                'type': 'query_media_results',
+                                'token': data.get('token'),
+                                'results': [_media_dict(m)
+                                        for m in self.server.desk.query_media(
+                                                data.get('query', ''),
+                                                data.get('skip', 0),
+                                                data.get('count', None))]})
                 else:
                         self.send_message({
                                 'type': 'error',
