@@ -12,6 +12,13 @@ from sarah.event import Event
 from sarah._itertools import iter_by_n
 from joyce.base import JoyceChannel
 
+def _media_dict(media):
+        return {'key': str(media.key),
+                'artist': media.artist,
+                'title': media.title,
+                'uploadedByKey': str(media.uploadedByKey),
+                'length': media.length}
+
 
 class MariedChannelClass(JoyceChannel):
         def __init__(self, server, *args, **kwargs):
@@ -202,18 +209,12 @@ class JoyceRS(Module):
         def _on_playing_changed(self, previously_playing):
                 self._send_playing(self._followers_of('playing'))
 
-        def _get_media_dict(self, media):
-                return {'key': str(media.key),
-                        'artist': media.artist,
-                        'title': media.title,
-                        'uploadedByKey': str(media.uploadedByKey),
-                        'length': media.length}
         def _send_playing(self, followers):
                 playing = self.desk.get_playing()
                 msg = { 'type': 'playing',
                         'playing': {
-                        'mediaKey': None if playing[0] is None
-                                else str(playing[0].key),
+                        'media': None if playing[0] is None
+                                else _media_dict(playing[0]),
                         'byKey': None if playing[1] is None
                                 else str(playing[1].byKey),
                         'serverTime': time.time(),
@@ -243,7 +244,7 @@ class JoyceRS(Module):
                 for ms in iter_by_n(self.desk.list_media(), 250):
                         msg = {
                                 'type': 'media_part',
-                                'part': [self._get_media_dict(m) for m in ms]}
+                                'part': [_media_dict(m) for m in ms]}
                         for follower in followers:
                                 follower.send_message(msg)
 
