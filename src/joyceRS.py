@@ -239,7 +239,7 @@ class JoyceRS(Module):
                                         'key': self.requests_ns.key_of(r),
                                         'byKey': None if r.byKey is None
                                                 else str(r.byKey),
-                                        'mediaKey': str(r.mediaKey)
+                                        'media': _media_dict(r.media)
                                      } for r
                                 in self.desk.list_requests()]}
                 for follower in followers:
