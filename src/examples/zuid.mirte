@@ -29,6 +29,9 @@ instances:
     module: gstMediaInfo
   orchestrator:
     module: orchestrator
+    player: player
+    queue: queue
+    randomQueue: randomQueue
   randomQueue:
     module: randomQueue
     random: random
