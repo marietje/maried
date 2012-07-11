@@ -268,7 +268,8 @@ class MongoCollection(Collection):
                                  'l': time.time()}) # last_used
                         ret = [MongoMedia(self, d)
                                 for d in self.cMedia.find(query_dict, skip=skip,
-                                        limit=(0 if count is None else count))]
+                                        limit=(0 if count is None else count),
+                                        sort=[('a', 1), ('t', 1)])]
                         time_spent = time.time() - start_time
                         self.l.debug("query %s directly from cache; "+
                                         "%s results; %s seconds",
@@ -314,7 +315,8 @@ class MongoCollection(Collection):
                         ret = [MongoMedia(self, d)
                                 for d in self.cMedia.find({'qc': query},
                                         skip=skip, limit=(0 if count is None
-                                                        else count))]
+                                                        else count),
+                                        sort=[('a', 1), ('t', 1)])]
                         time_spent = time.time() - start_time
                         self.l.debug("query %s new in cache; used %s; "+
                                         "%s results; %s seconds",
@@ -324,7 +326,8 @@ class MongoCollection(Collection):
                         return ret
                 ret = [MongoMedia(self, d) for d in
                                 self.cMedia.find(query_dict, skip=skip,
-                                        limit=(0 if count is None else count))]
+                                        limit=(0 if count is None else count),
+                                        sort=[('a', 1), ('t', 1)])]
                 if qs and qs[0].query == query:
                         q = qs[0]
                         q.last_used = time.time()
