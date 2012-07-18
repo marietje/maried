@@ -23,7 +23,7 @@ instances:
     users: users
   history:
     module: mongoHistory
-    collection: collection
+    collection: history
     db: mongoDb
   mediaInfo:
     module: gstMediaInfo
