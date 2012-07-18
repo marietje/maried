@@ -194,22 +194,44 @@ class MongoCollection(Collection):
                 self.got_media_event.set()
 
         def add(self, mediaFile, user, extraInfo=None):
+                # First, analyze the mediaFile.  This will get the tags,
+                # replayGain, etc.
+                self.l.info("%s: get_info", mediaFile.key)
                 info = mediaFile.get_info()
                 if not extraInfo is None:
                         info.update(extraInfo)
+                # Secondly, add more metadata.
                 info.update({
                         'mediaFileKey': mediaFile.key,
                         'uploadedTimestamp': time.time(),
                         'randomOffset': random.random(),
-                        'uploadedByKey': user.key})
+                        'uploadedByKey': user.key,
+                        'queryCache': []})
                 if not 'artist' in info or not 'title' in info:
                         raise MissingTagsError
+                info['searchString'] = unidecode.unidecode(
+                                info['artist'] + ' ' + info['title']).lower()
+                # Thirdly, find which cached queries match.
+                self.l.info("%s: checking which queries match", mediaFile.key)
+                for d in self.cQueries.find({'c': True}, []):
+                        ok = True
+                        for bit in d['_id'].split(' '):
+                                if bit not in info['searchString']:
+                                        ok = False
+                                        break
+                        if ok:
+                                info['queryCache'].append(d['_id'])
+                # FIXME There is a race-condition here: if a new cached query
+                #       is added here, we do not note it.
+                # Finally, add it to the collection
                 key = self.cMedia.insert(MongoMedia.normalize_dict(info))
                 info['_id'] = key
                 with self.lock:
                         if not self.got_media_event.is_set():
                                 self.got_media_event.set()
-                return MongoMedia(self, info)
+                ret = MongoMedia(self, info)
+                self.l.info("%s: inserted as %s", mediaFile.key, ret)
+                return ret
         
         def _unlink_media(self, media):
                 self.cMedia.remove({'_id': media.key})
