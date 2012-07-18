@@ -157,6 +157,10 @@ class MongoCollection(Collection):
                         self.cUsers = self.db.db[self.usersCollection]
                         self.cMedia = self.db.db[self.mediaCollection]
                         self.cQueries = self.db.db[self.queriesCollection]
+                        self.cQueries.ensure_index('c')
+                        self.cMedia.ensure_index('r')
+                        self.cMedia.ensure_index('ub')
+                        self.cMedia.ensure_index([('qc',1),('s',1)])
                         if self.cMedia.count():
                                 self.got_media_event.set()
                         else:
@@ -471,6 +475,8 @@ class MongoHistory(History):
                 if not self.db.ready:
                         return
                 self.cHistory = self.db.db[self.collection]
+                self.cHistory.ensure_index('m')
+                self.cHistory.ensure_index('b')
                 self.on_pretty_changed()
         
         def record(self, media, request, at):
