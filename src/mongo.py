@@ -13,6 +13,7 @@ try:
 except ImportError:
         from bson import ObjectId
 
+import unidecode
 import threading
 import itertools
 import tempfile
@@ -21,6 +22,7 @@ import hashlib
 import random
 import gridfs
 import base64
+import string
 import time
 import os
 
@@ -85,6 +87,7 @@ class MongoMedia(AliasingMixin, Media):
                    'uploadedByKey': 'ub',
                    'randomOffset': 'r',
                    'queryCache': 'qc',
+                   'searchString': 's',
                    'uploadedTimestamp': 'ut'}
         def __init__(self, coll, data):
                 super(MongoMedia, self).__init__(coll,
@@ -230,6 +233,12 @@ class MongoCollection(Collection):
 
         def query(self, query, skip=0, count=None):
                 start_time = time.time()
+                # Normalize the query: only words of a-z and 0-9 separated
+                # by a single space.
+                query = ' '.join(filter(bool,
+                                filter(lambda x: string.digits + ' ' +
+                                        string.ascii_lowercase,
+                                unidecode.unidecode(query).lower()).split(' ')))
                 # There are three cases.
                 #   (I)   This exact query is cached
                 #   (II)  A prefix of this query is cached (eg. we want `them',
@@ -241,15 +250,11 @@ class MongoCollection(Collection):
                 qs.sort(key=lambda q: -len(q.query))
                 cached_qs = filter(lambda q: q.is_cached, qs)
                 query_dict = {}
-                # TODO The query `hed bartender' should match
-                #       (hed) PE - Bartender
                 if not cached_qs or cached_qs[0].query != query:
                         # We are not in case (I), thus we need to search.
                         query_dict.update({
-                                '$or': [{'a': {'$regex': query,
-                                                    '$options': 'i'}},
-                                        {'t': {'$regex': query,
-                                                   '$options': 'i'}}]})
+                                '$and': [{'s': {'$regex': bit}}
+                                        for bit in query.split(' ')]})
                 if cached_qs:
                         # We are in case (I) or (II), thus we can reduce
                         # the search space with the prefix cached_qs[0].query.
@@ -269,7 +274,7 @@ class MongoCollection(Collection):
                         ret = [MongoMedia(self, d)
                                 for d in self.cMedia.find(query_dict, skip=skip,
                                         limit=(0 if count is None else count),
-                                        sort=[('a', 1), ('t', 1)])]
+                                        sort=[('s', 1)])]
                         time_spent = time.time() - start_time
                         self.l.debug("query %s directly from cache; "+
                                         "%s results; %s seconds",
@@ -316,7 +321,7 @@ class MongoCollection(Collection):
                                 for d in self.cMedia.find({'qc': query},
                                         skip=skip, limit=(0 if count is None
                                                         else count),
-                                        sort=[('a', 1), ('t', 1)])]
+                                        sort=[('s', 1)])]
                         time_spent = time.time() - start_time
                         self.l.debug("query %s new in cache; used %s; "+
                                         "%s results; %s seconds",
@@ -327,7 +332,7 @@ class MongoCollection(Collection):
                 ret = [MongoMedia(self, d) for d in
                                 self.cMedia.find(query_dict, skip=skip,
                                         limit=(0 if count is None else count),
-                                        sort=[('a', 1), ('t', 1)])]
+                                        sort=[('s', 1)])]
                 if qs and qs[0].query == query:
                         q = qs[0]
                         q.last_used = time.time()
