@@ -211,19 +211,7 @@ class MongoCollection(Collection):
                         raise MissingTagsError
                 info['searchString'] = unidecode.unidecode(
                                 info['artist'] + ' ' + info['title']).lower()
-                # Thirdly, find which cached queries match.
-                self.l.info("%s: checking which queries match", mediaFile.key)
-                for d in self.cQueries.find({'c': True}, []):
-                        ok = True
-                        for bit in d['_id'].split(' '):
-                                if bit not in info['searchString']:
-                                        ok = False
-                                        break
-                        if ok:
-                                info['queryCache'].append(d['_id'])
-                # FIXME There is a race-condition here: if a new cached query
-                #       is added here, we do not note it.
-                # Finally, add it to the collection
+                # Thirdly, add it to the collection
                 key = self.cMedia.insert(MongoMedia.normalize_dict(info))
                 info['_id'] = key
                 with self.lock:
@@ -231,6 +219,19 @@ class MongoCollection(Collection):
                                 self.got_media_event.set()
                 ret = MongoMedia(self, info)
                 self.l.info("%s: inserted as %s", mediaFile.key, ret)
+                # Finally, find which cached queries match.
+                qc = []
+                for d in self.cQueries.find({'c': True}, []):
+                        ok = True
+                        for bit in d['_id'].split(' '):
+                                if bit not in info['searchString']:
+                                        ok = False
+                                        break
+                        if ok:
+                                qc.append(d['_id'])
+                self.cMedia.update({'_id': info['_id']},   # query
+                                {'$pushAll': {'qc': qc}})  # queryCache
+                self.l.info("%s: queries matched: %s", mediaFile.key, len(qc))
                 return ret
         
         def _unlink_media(self, media):
