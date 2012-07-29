@@ -532,5 +532,5 @@ class MongoSimpleRandom(Random):
                 if ret is None:
                         self.l.info("Waiting on collection.got_media_event")
                         self.collection.got_media_event.wait()
-                        ret = self.colleciton._pick_random_media()
+                        ret = self.collection._pick_random_media()
                 return ret

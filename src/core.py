@@ -497,7 +497,7 @@ class SimpleRandom(Random):
                 super(SimpleRandom, self).__init__(*args, **kwargs)
                 self.keys = None
                 self.lock = threading.Lock()
-                self.register_on_setting_changed('colleciton',
+                self.register_on_setting_changed('collection',
                                 self.osc_collection)
                 self.osc_collection()
         def osc_collection(self):
