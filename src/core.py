@@ -170,8 +170,8 @@ class Desk(Module):
                 playing = self.orchestrator.get_playing()
                 # We check the end time to avoid to skip a race conditon
                 # and skip the next song.
-                if playing[2]  - datetime.datetime.now() \
-                                < datetime.timedelta(0, 1):
+                if playing[2] and (playing[2]  - datetime.datetime.now()
+                                        < datetime.timedelta(0, 1)):
                         raise Denied
                 self.users.assert_skip(user, playing[1])
                 self.orchestrator.skip()
