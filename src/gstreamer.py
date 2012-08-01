@@ -255,12 +255,14 @@ class GstPlayer(Player):
                 now = time.time()
                 
                 self.l.info("playing: %s"% self.next_media)
+
+                # Get old end-time and playing media
+                old_endTime = self.endTime
+                old_media = self.playing_media
                 
                 self._on_media_finished()
 
                 # Update state
-                old_endTime = self.endTime
-                old_media = self.playing_media
                 self.playing_media, self.next_media = self.next_media, None
                 self.endTime = datetime.datetime.fromtimestamp(
                                 now + self.playing_media.length)
