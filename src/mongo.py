@@ -534,3 +534,6 @@ class MongoSimpleRandom(Random):
                         self.collection.got_media_event.wait()
                         ret = self.collection._pick_random_media()
                 return ret
+        @property
+        def ready(self):
+                return self.collection.got_media_event.is_set()
