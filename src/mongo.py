@@ -527,6 +527,7 @@ class MongoUsers(Users):
                 return self.collection._user_by_key(key)
 
 class MongoSimpleRandom(Random):
+        # The interesting part
         def pick(self):
                 ret = self.collection._pick_random_media()
                 if ret is None:
@@ -534,6 +535,30 @@ class MongoSimpleRandom(Random):
                         self.collection.got_media_event.wait()
                         ret = self.collection._pick_random_media()
                 return ret
+
+        # The part to make sure everything works fine when at first
+        # there is no media and then some media is added.
+        # TODO properly handle the case that a collection is changed
+        #      from one with media to one without media
+        def __init__(self, *args, **kwargs):
+                super(MongoSimpleRandom, self).__init__(*args, **kwargs)
+                self._media_waiter_running = False
+                self._media_waiter_lock = threading.Lock()
         @property
         def ready(self):
-                return self.collection.got_media_event.is_set()
+                with self._media_waiter_lock:
+                        ret = self.collection.got_media_event.is_set()
+                        if not ret and not self._media_waiter_running:
+                                self.threadPool.execute_named(
+                                        self._run_media_waiter,
+                                        '%s _run_media_waiter' % self.l.name)
+                                self._media_waiter_running = True
+                        return ret
+
+        def _run_media_waiter(self):
+                self.l.debug('_run_media_waiter: waiting on got_media_event')
+                self.collection.got_media_event.wait()
+                self.l.debug('_run_media_waiter:  woke!')
+                self.on_ready()
+                with self._media_waiter_lock:
+                        self._media_waiter_running = False

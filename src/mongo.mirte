@@ -44,3 +44,4 @@ definitions:
     inherits: [simpleRandom]
     settings:
       collection: {type: mongoCollection}
+      threadPool: {type: threadPool}
