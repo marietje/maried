@@ -127,7 +127,7 @@ class MongoDb(Module):
         def osc_creds(self):
                 if None in (self.host, self.port, self.db):
                         return
-                self.con = pymongo.Connection(self.host, self.port)
+                self.con = pymongo.MongoClient(self.host, self.port)
                 self.db = self.con[self.db]
                 self.ready = True
                 self.on_changed()
@@ -296,8 +296,8 @@ class MongoCollection(Collection):
                         #  self.cQueries.save(q.to_dict())
                         self.cQueries.update(
                                 {'_id': cached_qs[0].query},
-                                {'$inc': 't',       # times_used
-                                 'l': time.time()}) # last_used
+                                {'$inc': {'t': 1},            # times_used
+                                 '$set': {'l': time.time()}}) # last_used
                         ret = [MongoMedia(self, d)
                                 for d in self.cMedia.find(query_dict, skip=skip,
                                         limit=(0 if count is None else count),
@@ -316,8 +316,8 @@ class MongoCollection(Collection):
                         #  self.cQueries.save(q.to_dict())
                         self.cQueries.update(
                                 {'_id': cached_qs[0].query},
-                                {'$inc': 'T',       # times_used_ind.
-                                 'L': time.time()}) # last_used_ind.
+                                {'$inc': {'T': 1},            # times_used_ind.
+                                 '$set': {'L': time.time()}}) # last_used_ind.
                 # We are in case (II) or (III).
                 if ((cached_qs and cached_qs[0].query != query
                                 and cached_qs[0].nMatches
