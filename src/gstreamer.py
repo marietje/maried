@@ -1,7 +1,5 @@
-from __future__ import with_statement
-
-# gst, gobject and pygst are imported in GtkMainLoop.run
-gst, gobject, pygst = None, None, None
+# gst, gobject and gi are imported in GtkMainLoop.run
+gi, gst, gobject = None, None, None
 
 import time
 import os.path
@@ -20,15 +18,17 @@ class GtkMainLoop(Module):
         def run(self):
                 self.do_imports()
                 gobject.threads_init()
+                gst.init()
                 self.loop = gobject.MainLoop()
                 self.ready.set()
                 self.loop.run()
         def do_imports(self):
-                global gst, gobject, pygst
-                import gst as _gst
-                import gobject as _gobject
-                import pygst as _pygst
-                gst, gobject, pygst = _gst, _gobject, _pygst
+                global gi, gst, gobject
+                import gi as _gi
+                _gi.require_version('Gst', '1.0')
+                from gi.repository import GObject as _gobject
+                from gi.repository import Gst as _gst
+                gst, gobject, gi = _gst, _gobject, _gi
         def stop(self):
                 self.loop.quit()
 
@@ -39,17 +39,17 @@ class GstMediaInfo(MediaInfo):
                         self.event = threading.Event()
                         self.inError = False
                         self.result = dict()
-                        self.bin = gst.element_factory_make(
+                        self.bin = gst.ElementFactory.make(
                                         'playbin', 'playbin')
-                        fakesink = gst.element_factory_make(
+                        fakesink = gst.ElementFactory.make(
                                         'fakesink', 'fakesink')
-                        rganalysis = gst.element_factory_make(
+                        rganalysis = gst.ElementFactory.make(
                                         'rganalysis', 'rganalysis')
-                        bin2 = gst.element_factory_make('bin', 'bin')
+                        bin2 = gst.ElementFactory.make('bin', 'bin')
                         bin2.add(rganalysis)
                         bin2.add(fakesink)
                         rganalysis.link(fakesink)
-                        bin2.add_pad(gst.GhostPad('ghostpad',
+                        bin2.add_pad(gst.GhostPad.new('sink',
                                         rganalysis.get_static_pad('sink')))
                         self.bin.set_property('video-sink', fakesink)
                         self.bin.set_property('audio-sink', bin2)
@@ -58,27 +58,29 @@ class GstMediaInfo(MediaInfo):
                         bus.connect('message', self.on_message)
                         bus.connect('message::tag', self.on_tag)
                         self.bin.set_property('uri', uri)
-                        self.bin.set_state(gst.STATE_PLAYING)
+                        if (self.bin.set_state(gst.State.PLAYING)
+                                        == gst.StateChangeReturn.FAILURE):
+                                self.mi.l.warn('set_state failed')
                 
                 def on_message(self, bus, message):
                         t = message.type
-                        if t == gst.MESSAGE_ERROR:
+                        if t == gst.MessageType.ERROR:
                                 error, debug = message.parse_error()
                                 self.mi.l.error("Gst: %s %s" % (error, debug))
                                 self.inError = True
                                 self.finish()
-                        elif t == gst.MESSAGE_EOS:
+                        elif t == gst.MessageType.EOS:
                                 self.on_eos()
 
                 def on_eos(self):
                         rawpos = self.bin.query_position(
-                                        gst.FORMAT_TIME)[0]
+                                        gst.Format.TIME)[1]
                         try:
-                                rawdur = self.bin.query_duration(
-                                        gst.FORMAT_TIME)[0]
+                                ok, rawdur = self.bin.query_duration(
+                                        gst.Format.TIME)
                         except gst.QueryError:
                                 rawdur = -1
-                        if rawdur == -1:        
+                        if not ok or rawdur == -1:
                                 self.mi.l.warn('query_duration failed, '+
                                         'falling back to query_position')
                                 raw = rawpos
@@ -89,15 +91,16 @@ class GstMediaInfo(MediaInfo):
                 
                 def on_tag(self, bus, message):
                         tagList = message.parse_tag()
-                        for key in tagList.keys():
+                        for n in xrange(tagList.n_tags()):
+                                key = tagList.nth_tag_name(n)
                                 if key == 'artist':
-                                        self.result[key] = tagList[key]
+                                        self.result[key] = tagList.get_string(key)[1]
                                 elif key == 'title':
-                                        self.result[key] = tagList[key]
+                                        self.result[key] = tagList.get_string(key)[1]
                                 elif key == gst.TAG_TRACK_PEAK:
-                                        self.result['trackPeak'] = tagList[key]
+                                        self.result['trackPeak'] = tagList.get_double(key)[1]
                                 elif key == gst.TAG_TRACK_GAIN:
-                                        self.result['trackGain'] = tagList[key]
+                                        self.result['trackGain'] = tagList.get_double(key)[1]
 
                 def interrupt(self):
                         self.inError = True
@@ -105,7 +108,9 @@ class GstMediaInfo(MediaInfo):
 
                 def finish(self):
                         self.event.set()
-                        self.bin.set_state(gst.STATE_NULL)
+                        if (self.bin.set_state(gst.State.NULL)
+                                        == gst.StateChangeReturn.FAILURE):
+                                self.mi.l.warn('set_state failed')
                         self.bus.remove_signal_watch()
                         del(self.bin)
                         del(self.bus)
@@ -162,29 +167,34 @@ class GstPlayer(Player):
                 self.gtkMainLoop.ready.wait()
                 
                 # set up the player bin
-                self.bin = gst.element_factory_make('playbin2', 'playbin2')
-                self.bin2 = gst.element_factory_make('bin', 'bin')
-                self.ac = gst.element_factory_make('audioconvert',
+                self.bin = gst.ElementFactory.make('playbin', 'playbin')
+                self.bin2 = gst.ElementFactory.make('bin', 'bin')
+                self.ac = gst.ElementFactory.make('audioconvert',
                                 'audioconvert')
-                self.ac2 = gst.element_factory_make('audioconvert',
+                self.ac2 = gst.ElementFactory.make('audioconvert',
                                 'audioconvert2')
-                self.rgvolume = gst.element_factory_make('rgvolume', 'rgvolume')
-                self.autoaudiosink = gst.element_factory_make('autoaudiosink',
+                self.rgvolume = gst.ElementFactory.make('rgvolume', 'rgvolume')
+                self.rglimiter = gst.ElementFactory.make('rglimiter', 'rglimiter')
+                self.autoaudiosink = gst.ElementFactory.make('autoaudiosink',
                                         'autoaudiosink')
+
                 self.bin2.add(self.rgvolume)
                 self.bin2.add(self.ac)
                 self.bin2.add(self.ac2)
+                self.bin2.add(self.rglimiter)
                 self.bin2.add(self.autoaudiosink)
                 self.ac.link(self.rgvolume)
                 self.rgvolume.link(self.ac2)
+                self.rgvolume.link(self.rglimiter)
                 self.ac2.link(self.autoaudiosink)
-                self.bin2.add_pad(gst.GhostPad('ghostpad',
+                self.bin2.add_pad(gst.GhostPad.new('sink',
                         self.ac.get_static_pad('sink')))
                 self.bin.set_property('audio-sink', self.bin2)
                 self.bus = self.bin.get_bus()
                 self.bus.add_signal_watch()
                 self.bus.connect('message', self.on_message)
                 self.bin.connect('about-to-finish', self._on_about_to_finish)
+                self.bin.connect('audio-changed', self._on_stream_changed)
 
                 # internal state
                 self.idle = True
@@ -237,17 +247,21 @@ class GstPlayer(Player):
                 self.bin.set_property('uri', uri)
 
                 # Inject TRACK_GAIN and TRACK_PEAK tags
-                tl = gst.TagList()
-                tl[gst.TAG_TRACK_GAIN] = media.trackGain
-                tl[gst.TAG_TRACK_PEAK] = media.trackPeak
-                self.rg_event = gst.event_new_tag(tl)
+                tl = gst.TagList.new_empty()
+                tl.add_value(gst.TagMergeMode.APPEND, gst.TAG_TRACK_GAIN,
+                            media.trackGain)
+                tl.add_value(gst.TagMergeMode.APPEND, gst.TAG_TRACK_PEAK,
+                            media.trackPeak)
+                self.rg_event = gst.Event.new_tag(tl)
 
                 # Start playing -- if not already
                 if got_to_start_playing or self.in_a_skip:
-                        self.bin.set_state(gst.STATE_PLAYING)
+                        if (self.bin.set_state(gst.State.PLAYING)
+                                        == gst.StateChangeReturn.FAILURE):
+                                self.mi.l.warn('set_state failed')
                         self.idle = False
 
-        def _on_stream_changed(self):
+        def _on_stream_changed(self, _):
                 """ Called when GStreamer signals that the playing stream
                     has changed.  In this method we will clean up the previous
                     stream (if any) and let the world know the playing
@@ -273,8 +287,8 @@ class GstPlayer(Player):
                         self.in_a_skip = False
 
                 # Notify the world
-                if not old_media is None:
-                        self.on_playing_finished(old_media, old_endTime)
+                # if not old_media is None:
+                #         self.on_playing_finished(old_media, old_endTime)
                 self.on_playing_started(self.playing_media, self.endTime)
 
         def _on_about_to_finish(self, bin):
@@ -285,7 +299,9 @@ class GstPlayer(Player):
                 with self.idleCond:
                         if not self.next_media is None:
                                 return
-                        self.bin.set_state(gst.STATE_NULL)
+                        if (self.bin.set_state(gst.State.NULL)
+                                        == gst.StateChangeReturn.FAILURE):
+                                self.mi.l.warn('set_state failed')
                         self._on_media_finished()
                         self.idle = True
                         self.idleCond.notifyAll()
@@ -314,27 +330,31 @@ class GstPlayer(Player):
                                 raise RuntimeError, "Already skipping"
                         self.l.debug('Skipping')
                         self.in_a_skip = True
-                        self.bin.set_state(gst.STATE_NULL)
+                        if (self.bin.set_state(gst.State.NULL)
+                                        == gst.StateChangeReturn.FAILURE):
+                                self.mi.l.warn('set_state failed')
                         self.on_about_to_finish()
 
         def _interrupt(self):
                 with self.idleCond:
                         self.l.debug('_interrupt!')
-                        self.bin.set_state(gst.STATE_NULL)
+                        if (self.bin.set_state(gst.State.NULL)
+                                        == gst.StateChangeReturn.FAILURE):
+                                self.mi.l.warn('set_state failed')
                         self._on_media_finished()
                         self.idle = True
                         self.idleCond.notifyAll()
         
         def on_message(self, bus, message):
-                if message.type == gst.MESSAGE_ERROR:
+                if message.type == gst.MessageType.ERROR:
                         error, debug = message.parse_error()
                         self.l.error("Gst: %s %s" % (error, debug))
                         self._on_eos()
                 elif (not self.rg_event is None and
-                                message.type == gst.MESSAGE_STATE_CHANGED and
-                                message.src == self.rgvolume and
-                                message.parse_state_changed()[1] ==
-                                        gst.STATE_PAUSED):
+                            message.type == gst.MessageType.STATE_CHANGED and
+                            message.src == self.rgvolume and
+                            message.parse_state_changed()[1] ==
+                                    gst.State.PAUSED):
                         self.ac.get_static_pad('src').push_event(
                                         self.rg_event)
                         self.rg_event = None
@@ -344,12 +364,8 @@ class GstPlayer(Player):
                                 self.l.warn('replaygain: target gain '+
                                         'not reached: trg %s res %s' % (
                                                 tg, rg))
-                elif message.type == gst.MESSAGE_EOS:
+                elif message.type == gst.MessageType.EOS:
                         self._on_eos()
-                elif (message.type == gst.MESSAGE_ELEMENT and
-                                message.structure.get_name() ==
-                                        'playbin2-stream-changed'):
-                        self._on_stream_changed()
 
         
         def stop(self):
