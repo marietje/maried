@@ -266,6 +266,15 @@ class MongoCollection(Collection):
                 filter(lambda x: string.digits + ' ' +
                     string.ascii_lowercase,
                 unidecode.unidecode(query).lower()).split(' ')))
+        # Trivial case: the query is the empty string
+        if not query:
+            ret = [MongoMedia(self, d)
+                for d in self.cMedia.find(skip=skip,
+                    limit=(0 if count is None else count), sort=[('s', 1)])]
+            time_spent = time.time() - start_time
+            self.l.debug("empty query; %s results; %s seconds",
+                                len(ret), time_spent)
+            return ret
         # There are three cases.
         #   (I)   This exact query is cached
         #   (II)  A prefix of this query is cached (eg. we want `them',
