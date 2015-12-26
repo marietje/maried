@@ -69,26 +69,26 @@ class MongoUser(AliasingMixin, User):
 
 class MongoQuery(AliasingDictLike):
     aliases = {'query': '_id',
-           'is_cached': 'c',
-           'last_used': 'l',
-           'times_used': 't',
-           'nMatches': 'n',
-           'last_used_indirectly': 'L',
-           'times_used_indirectly': 'T'}
+               'is_cached': 'c',
+               'last_used': 'l',
+               'times_used': 't',
+               'nMatches': 'n',
+               'last_used_indirectly': 'L',
+               'times_used_indirectly': 'T'}
 
 class MongoMedia(AliasingMixin, Media):
     aliases = {'key': '_id',
-           'artist': 'a',
-           'title': 't',
-           'trackGain': 'tg',
-           'trackPeak': 'tp',
-           'length': 'l',
-           'mediaFileKey': 'k',
-           'uploadedByKey': 'ub',
-           'randomOffset': 'r',
-           'queryCache': 'qc',
-           'searchString': 's',
-           'uploadedTimestamp': 'ut'}
+               'artist': 'a',
+               'title': 't',
+               'trackGain': 'tg',
+               'trackPeak': 'tp',
+               'length': 'l',
+               'mediaFileKey': 'k',
+               'uploadedByKey': 'ub',
+               'randomOffset': 'r',
+               'queryCache': 'qc',
+               'searchString': 's',
+               'uploadedTimestamp': 'ut'}
     def __init__(self, coll, data):
         super(MongoMedia, self).__init__(coll,
                 self.normalize_dict(data))
@@ -98,9 +98,9 @@ class MongoMedia(AliasingMixin, Media):
 
 class MongoPastRequest(AliasingMixin, PastRequest):
     aliases = {'key': '_id',
-           'byKey': 'b',
-           'at': 'a',
-           'mediaKey': 'm'}
+               'byKey': 'b',
+               'at': 'a',
+               'mediaKey': 'm'}
     def __init__(self, history, data):
         super(MongoPastRequest, self).__init__(history,
                 self.normalize_dict(data))
