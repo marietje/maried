@@ -93,10 +93,8 @@ class GstMediaInfo(MediaInfo):
                         tagList = message.parse_tag()
                         for n in xrange(tagList.n_tags()):
                                 key = tagList.nth_tag_name(n)
-                                if key == 'artist':
-                                        self.result[key] = tagList.get_string(key)[1]
-                                elif key == 'title':
-                                        self.result[key] = tagList.get_string(key)[1]
+                                if key in ('artist', 'title'):
+                                        self.result[key] = tagList.get_string(key)[1].decode('utf-8')
                                 elif key == gst.TAG_TRACK_PEAK:
                                         self.result['trackPeak'] = tagList.get_double(key)[1]
                                 elif key == gst.TAG_TRACK_GAIN:
