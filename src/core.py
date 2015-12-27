@@ -129,12 +129,14 @@ class Desk(Module):
                 self.on_playing_changed = Event()
                 self.on_media_changed = Event()
                 self.on_requests_changed = Event()
-                self.orchestrator.on_playing_changed.register(
-                                self._on_playing_changed)
-                self.collection.on_changed.register(
-                                self._on_collection_changed)
-                self.queue.on_changed.register(
-                                self._on_requests_changed)
+                if self.orchestrator:
+                        self.orchestrator.on_playing_changed.register(
+                                        self._on_playing_changed)
+                        self.collection.on_changed.register(
+                                        self._on_collection_changed)
+                if self.queue:
+                        self.queue.on_changed.register(
+                                        self._on_requests_changed)
         def _on_playing_changed(self, previous_playing):
                 self.on_playing_changed(previous_playing)
         def _on_collection_changed(self, changeList):

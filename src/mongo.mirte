@@ -36,7 +36,7 @@ definitions:
     settings:
       db: {type: mongoDb}
       collection: {type: mongoCollection}
-      queue: {type: queue}
+      queue: {type: queue, allownull: true}
       maxQueueLength: {type: int, default: 2700}
       maxQueueCount: {type: int, default: 15}
   mongoSimpleRandom:

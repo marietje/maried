@@ -14,8 +14,8 @@ definitions:
     settings:
       collection: {type: collection}
       mediaStore: {type: mediaStore}
-      orchestrator: {type: orchestrator}
-      queue: {type: queue}
+      orchestrator: {type: orchestrator, allownull: true}
+      queue: {type: queue, allownull: true}
       users: {type: users}
   history: {}
   mediaInfo:
