@@ -88,6 +88,9 @@ class BaseRequest(DictLike):
             return DictLike.__getattr__(self, 'by')
         except AttributeError:
             return None
+    def __repr__(self):
+        return "<%s %r by %r>" % (self.__class__.__name__,
+                                        self.media, self.by)
 class PastRequest(BaseRequest):
     def __init__(self, history, data):
         super(PastRequest, self).__init__(data)
