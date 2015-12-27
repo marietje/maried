@@ -192,7 +192,6 @@ class GstPlayer(Player):
         self.bus.add_signal_watch()
         self.bus.connect('message', self.on_message)
         self.bin.connect('about-to-finish', self._on_about_to_finish)
-        self.bin.connect('audio-changed', self._on_stream_changed)
 
         # internal state
         self.idle = True
@@ -259,7 +258,7 @@ class GstPlayer(Player):
                 self.mi.l.warn('set_state failed')
             self.idle = False
 
-    def _on_stream_changed(self, _):
+    def _on_stream_changed(self):
         """ Called when GStreamer signals that the playing stream
             has changed.  In this method we will clean up the previous
             stream (if any) and let the world know the playing
@@ -267,6 +266,15 @@ class GstPlayer(Player):
         now = time.time()
         
         self.l.info("playing: %s"% self.next_media)
+
+        if self.rg_event:
+            self.ac.get_static_pad('src').push_event(self.rg_event)
+            self.rg_event = None
+            tg = self.rgvolume.get_property('target-gain')
+            rg = self.rgvolume.get_property('result-gain')
+            if tg != rg:
+                self.l.warn('replaygain: trg. gain not reached: trg %s res %s'
+                                % (tg, rg))
 
         # Get old end-time and playing media
         old_endTime = self.endTime
@@ -348,20 +356,8 @@ class GstPlayer(Player):
             error, debug = message.parse_error()
             self.l.error("Gst: %s %s" % (error, debug))
             self._on_eos()
-        elif (not self.rg_event is None and
-                message.type == gst.MessageType.STATE_CHANGED and
-                message.src == self.rgvolume and
-                message.parse_state_changed()[1] ==
-                    gst.State.PAUSED):
-            self.ac.get_static_pad('src').push_event(
-                    self.rg_event)
-            self.rg_event = None
-            tg = self.rgvolume.get_property('target-gain')
-            rg = self.rgvolume.get_property('result-gain')
-            if tg != rg:
-                self.l.warn('replaygain: target gain '+
-                    'not reached: trg %s res %s' % (
-                        tg, rg))
+        elif message.type == gst.MessageType.STREAM_START:
+            self._on_stream_changed()
         elif message.type == gst.MessageType.EOS:
             self._on_eos()
 
