@@ -262,6 +262,9 @@ class MongoCollection(Collection):
         start_time = time.time()
         # Normalize the query: only words of a-z and 0-9 separated
         # by a single space.
+        if len(query) > 1000:
+            self.l.warn("Query too long.  Capping to 1000")
+            query = query[:1000]
         query = ' '.join(filter(bool,
                 filter(lambda x: string.digits + ' ' +
                     string.ascii_lowercase,
